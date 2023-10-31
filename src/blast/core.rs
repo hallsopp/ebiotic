@@ -24,8 +24,8 @@ impl Default for Blast {
             database: "nr".to_string(),
             matrix: "BLOSUM62".to_string(),
             hitlist_size: 10,
-            email: "harryallsopp8@gmail.com".to_string(),
-            tool: "PHaDE".to_string(),
+            email: "".to_string(),
+            tool: "".to_string(),
         }
     }
 }
