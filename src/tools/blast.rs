@@ -1,10 +1,43 @@
 use reqwest::Client;
+use serde::Deserialize;
 use serde_json::Value;
 use tokio::time::{self, Duration};
 
-use super::results::Search;
+use super::core::{self, PollResult, BLAST_ENDPOINT};
 
-const BLAST_ENDPOINT: &str = "https://blast.ncbi.nlm.nih.gov/Blast.cgi";
+#[derive(Deserialize, Debug)]
+struct Description {
+    id: String,
+    accession: String,
+    title: String,
+    taxid: u32,
+    sciname: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct Hsp {
+    bit_score: f64,
+    score: u32,
+    evalue: f64,
+    identity: u32,
+    hseq: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct Hit {
+    num: u32,
+    description: Vec<Description>,
+    len: u32,
+    hsps: Vec<Hsp>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Search {
+    query_id: String,
+    query_title: String,
+    query_len: u32,
+    hits: Vec<Hit>,
+}
 
 pub struct Blast {
     endpoint: String,
@@ -57,10 +90,13 @@ impl Blast {
         let (rid, rtoe) = self.fetch_ridrtoe(&response);
 
         if self.poll(&rid, &rtoe, client.clone()).await {
-            let raw_results = self
-                .fetch_results(&rid, &rtoe, client.clone())
-                .await
-                .unwrap();
+            let raw_results = core::post_form(
+                &self.endpoint,
+                client.clone(),
+                &[("CMD", "Get"), ("RID", &rid)],
+            )
+            .await
+            .unwrap();
 
             return Ok(self.parse_raw_results(&raw_results).unwrap());
         } else {
@@ -70,71 +106,6 @@ impl Blast {
 }
 
 impl Blast {
-    async fn submit(&self, query: &str, client: Client) -> reqwest::Result<String> {
-        client
-            .post(&self.endpoint)
-            .form(&[
-                ("CMD", "Put"),
-                ("PROGRAM", &self.program),
-                ("DATABASE", &self.database),
-                ("MATRIX_NAME", &self.matrix),
-                ("HITLIST_SIZE", &self.hitlist_size.to_string()),
-                ("EMAIL", &self.email),
-                ("TOOL", &self.tool),
-                ("QUERY", query),
-            ])
-            .send()
-            .await?
-            .text()
-            .await
-    }
-
-    // Use this a feedback loop to check if the job is done
-    async fn poll(&self, rid: &str, rtoe: &str, client: Client) -> bool {
-        loop {
-            let response = client
-                .post(&self.endpoint)
-                .form(&[
-                    ("CMD", "Get"),
-                    ("FORMAT_OBJECT", "SearchInfo"),
-                    ("RID", rid),
-                    ("RTOE", rtoe),
-                ])
-                .send()
-                .await
-                .unwrap() // TODO: add error handling
-                .text()
-                .await
-                .unwrap();
-            if self.check_status(&response) {
-                return true;
-            } else {
-                println!("BLAST job not ready yet, sleeping for 60 seconds");
-                time::sleep(Duration::from_secs(60)).await;
-            }
-        }
-    }
-
-    async fn fetch_results(
-        &self,
-        rid: &str,
-        rtoe: &str,
-        client: Client,
-    ) -> reqwest::Result<String> {
-        client
-            .post(&self.endpoint)
-            .form(&[
-                ("CMD", "Get"),
-                ("FORMAT_TYPE", "JSON2_S"),
-                ("RID", rid),
-                ("RTOE", rtoe),
-            ])
-            .send()
-            .await?
-            .text()
-            .await
-    }
-
     // TODO: add error handling
     fn parse_raw_results(&self, raw_results: &str) -> Result<Search, ()> {
         let parsed: Value = serde_json::from_str(raw_results).unwrap();
@@ -181,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_parse_raw_results() {
-        let test_json = include_str!("../../tests/example_blast_response.json");
+        let test_json = include_str!("../../../tests/example_blast_response.json");
         let blast = Blast::default();
         Blast::parse_raw_results(&blast, test_json);
     }
