@@ -42,6 +42,7 @@ where
         match status {
             PollStatus::Finished => return Ok(response),
             PollStatus::Running(sleep_time) => {
+                println!("Job is still running, sleeping for {} seconds", sleep_time);
                 time::sleep(Duration::from_secs(sleep_time)).await;
             }
             PollStatus::Error => panic!("Something went wrong with the job"),

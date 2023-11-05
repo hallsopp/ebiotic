@@ -122,12 +122,7 @@ impl Blast {
             let search_results = core::post_form(
                 &self.endpoint,
                 client.clone(),
-                &[
-                    ("CMD", "Get"),
-                    ("FORMAT_TYPE", "JSON2"),
-                    ("RID", &rid),
-                    ("FORMAT_OBJECT", "Search"),
-                ],
+                &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
             )
             .await
             .unwrap();
