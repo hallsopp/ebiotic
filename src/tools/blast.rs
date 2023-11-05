@@ -104,7 +104,7 @@ impl Blast {
         .await
         .unwrap();
 
-        let (rid, rtoe) = self.fetch_ridrtoe(&response);
+        let (rid, _rtoe) = self.fetch_ridrtoe(&response);
 
         let search_info = core::poll(
             &self.endpoint,
