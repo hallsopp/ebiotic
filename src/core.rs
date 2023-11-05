@@ -1,20 +1,20 @@
 use reqwest::{Client, Result};
-use serde::Serialize;
 use tokio::time::{self, Duration};
 
-pub const TOOLS_ENDPOINT: &str = "https://www.ebi.ac.uk/Tools/services/rest/";
-pub const BLAST_ENDPOINT: &str = "https://blast.ncbi.nlm.nih.gov/Blast.cgi";
-
-pub(crate) enum PollResult {
+pub(crate) enum PollStatus {
     Finished,
-    Running,
+    Running(u64),
     Error,
+}
+
+pub(crate) trait Pollable {
+    fn poll_status(&self, response: &str) -> PollStatus;
 }
 
 pub(crate) async fn post_form(
     endpoint: &str,
     client: Client,
-    body: &[(&str, &dyn Serialize)],
+    body: &[(&str, &str)],
 ) -> Result<String> {
     client.post(endpoint).form(body).send().await?.text().await
 }
@@ -23,29 +23,28 @@ pub(crate) async fn post_form(
 pub(crate) async fn poll<F>(
     endpoint: &str,
     client: Client,
-    sleep_time: u64,
-    post_body: Option<&[(&str, &dyn Serialize)]>,
-    status_function: F,
+    post_body: Option<&[(&str, &str)]>,
+    method_caller: &F,
 ) -> Result<String>
 where
-    F: Fn(&str) -> PollResult,
+    F: Pollable,
 {
     loop {
-        let mut response;
+        let response;
         if let Some(body) = post_body {
             response = post_form(endpoint, client.clone(), body).await?;
         } else {
             response = client.get(endpoint).send().await?.text().await?;
         }
 
-        let status = status_function(&response);
+        let status = method_caller.poll_status(&response);
 
         match status {
-            PollResult::Finished => return Ok(response),
-            PollResult::Running => {
+            PollStatus::Finished => return Ok(response),
+            PollStatus::Running(sleep_time) => {
                 time::sleep(Duration::from_secs(sleep_time)).await;
             }
-            PollResult::Error => panic!("Something went wrong with the job"),
+            PollStatus::Error => panic!("Something went wrong with the job"),
         }
     }
 }

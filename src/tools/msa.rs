@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::core::TOOLS_ENDPOINT;
+use super::TOOLS_ENDPOINT;
 
 pub struct Clustalo {
     endpoint: String,

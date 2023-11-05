@@ -1,9 +1,10 @@
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::Value;
-use tokio::time::{self, Duration};
 
-use super::core::{self, PollResult, BLAST_ENDPOINT};
+use super::BLAST_ENDPOINT;
+
+use crate::core::{self, PollStatus, Pollable};
 
 #[derive(Deserialize, Debug)]
 struct Description {
@@ -86,22 +87,71 @@ impl Blast {
 
     pub async fn run(&self, query: &str) -> Result<Search, ()> {
         let client = Client::new();
-        let response = self.submit(query, client.clone()).await.unwrap();
+        let response = core::post_form(
+            &self.endpoint,
+            client.clone(),
+            &[
+                ("CMD", "Put"),
+                ("PROGRAM", &self.program),
+                ("DATABASE", &self.database),
+                ("MATRIX", &self.matrix),
+                ("HITLIST_SIZE", &self.hitlist_size.to_string()),
+                ("EMAIL", &self.email),
+                ("TOOL", &self.tool),
+                ("QUERY", query),
+            ],
+        )
+        .await
+        .unwrap();
+
         let (rid, rtoe) = self.fetch_ridrtoe(&response);
 
-        if self.poll(&rid, &rtoe, client.clone()).await {
-            let raw_results = core::post_form(
+        let search_info = core::poll(
+            &self.endpoint,
+            client.clone(),
+            Some(&[
+                ("CMD", "Get"),
+                ("FORMAT_OBJECT", "SearchInfo"),
+                ("RID", &rid),
+            ]),
+            &self,
+        )
+        .await;
+
+        if search_info.is_ok() {
+            let search_results = core::post_form(
                 &self.endpoint,
                 client.clone(),
-                &[("CMD", "Get"), ("RID", &rid)],
+                &[
+                    ("CMD", "Get"),
+                    ("FORMAT_TYPE", "JSON2"),
+                    ("RID", &rid),
+                    ("FORMAT_OBJECT", "Search"),
+                ],
             )
             .await
             .unwrap();
-
-            return Ok(self.parse_raw_results(&raw_results).unwrap());
+            self.parse_raw_results(&search_results)
         } else {
-            panic!("Something went wrong with the BLAST job");
+            panic!("Something went wrong with the job");
         }
+    }
+}
+
+impl Pollable for &Blast {
+    fn poll_status(&self, response: &str) -> PollStatus {
+        for line in response.lines() {
+            let trimmed_line = line.trim_start();
+            if let Some(line) = trimmed_line.strip_prefix("Status=") {
+                let status_string = line.to_string();
+                if status_string == "READY" {
+                    return PollStatus::Finished;
+                } else if status_string == "WAITING" {
+                    return PollStatus::Running(60);
+                }
+            }
+        }
+        PollStatus::Error
     }
 }
 
@@ -119,27 +169,16 @@ impl Blast {
         }
     }
 
-    fn check_status(&self, response: &str) -> bool {
-        let mut status = false;
-        for line in response.lines() {
-            let trimmed_line = line.trim_start();
-            if trimmed_line.starts_with("Status=") {
-                status = trimmed_line["Status=".len()..].to_string() == "READY";
-            }
-        }
-        status
-    }
-
     // TODO: add error handling
     fn fetch_ridrtoe(&self, response: &str) -> (String, String) {
         let mut rid = String::new();
         let mut rtoe = String::new();
         for line in response.lines() {
             let trimmed_line = line.trim_start();
-            if trimmed_line.starts_with("RID = ") {
-                rid = trimmed_line["RID = ".len()..].to_string();
-            } else if trimmed_line.starts_with("RTOE = ") {
-                rtoe = trimmed_line["RTOE = ".len()..].to_string();
+            if let Some(line) = trimmed_line.strip_prefix("RID = ") {
+                rid = line.to_string();
+            } else if let Some(line) = trimmed_line.strip_prefix("RTOE = ") {
+                rtoe = line.to_string();
             }
         }
         (rid, rtoe)
@@ -152,7 +191,7 @@ mod tests {
 
     #[test]
     fn test_parse_raw_results() {
-        let test_json = include_str!("../../../tests/example_blast_response.json");
+        let test_json = include_str!("../../tests/example_blast_response.json");
         let blast = Blast::default();
         Blast::parse_raw_results(&blast, test_json);
     }
