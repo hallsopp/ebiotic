@@ -1,0 +1,9 @@
+use tokio;
+
+#[tokio::test]
+async fn test_ncbi_blast_full() {
+    let blast = ebiotic::tools::Blast::default();
+    let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
+    let test = blast.run(query).await.unwrap();
+    println!("{:?}", test);
+}
