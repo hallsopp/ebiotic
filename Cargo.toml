@@ -5,6 +5,8 @@ edition = "2021"
 authors = ["Harry Allsopp <harryallsopp8@gmail.com>"]
 description = "A Rust crate for interacting with common bioinformatics tools from the EBI and NCBI."
 license = "GPL-3.0"
+repository = "https://github.com/Ferrugomics/ebiotic"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
