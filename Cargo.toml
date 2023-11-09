@@ -1,12 +1,11 @@
 [package]
 name = "ebiotic"
-version = "0.0.1"
+version = "0.0.11"
 edition = "2021"
 authors = ["Harry Allsopp <harryallsopp8@gmail.com>"]
 description = "A Rust crate for interacting with common bioinformatics tools from the EBI and NCBI."
 license = "GPL-3.0"
 repository = "https://github.com/Ferrugomics/ebiotic"
-readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,3 +14,4 @@ reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1.12", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+bio = "1.4.0"
