@@ -1,15 +1,24 @@
 use reqwest::Client;
 use std::fmt::Write;
-
-pub use bio::io::fasta::{Record, Records};
+use std::io::BufReader;
 
 use super::TOOLS_ENDPOINT;
-use crate::core::{self, PollStatus, Pollable};
+use crate::core::{self, PollStatus, PollableService};
+use crate::errors::EbioticError;
+
+pub use bio::io::fasta::{Reader, Record, Records};
 
 pub struct Clustalo {
     endpoint: String,
     email: String,
     sequences: Vec<Record>,
+}
+
+pub struct ClustaloResult<'a> {
+    aln_clustal_num: String,
+    pim: String,
+    phylotree: String,
+    fasta: Records<BufReader<&'a [u8]>>,
 }
 
 impl Default for Clustalo {
@@ -55,7 +64,7 @@ impl Clustalo {
         &self.sequences
     }
 
-    pub async fn run(&self) -> String {
+    pub async fn run(&self) -> Result<String, EbioticError> {
         let client = Client::new();
 
         let run_endpoint = format!("{}{}", self.endpoint, "run/");
@@ -68,8 +77,7 @@ impl Clustalo {
                 ("sequence", &self.pretty_format_records().as_str()),
             ],
         )
-        .await
-        .unwrap();
+        .await?;
 
         let poll_endpoint = format!("{}{}{}", &self.endpoint, &"status/", &response);
 
@@ -82,25 +90,25 @@ impl Clustalo {
                     self.endpoint, "result/", &response, "/aln-clustal_num"
                 ))
                 .send()
-                .await
-                .unwrap()
+                .await?
                 .text()
-                .await
-                .unwrap();
+                .await?;
 
-            return results;
+            return Ok(results);
         } else {
-            todo!();
+            return Err(EbioticError::ServiceError(
+                "Something went wrong with the job.".to_string(),
+            ));
         }
     }
 }
 
-impl Pollable for &Clustalo {
+impl PollableService for &Clustalo {
     fn poll_status(&self, response: &str) -> PollStatus {
-        println!("{}", response);
         match response {
             "FINISHED" => PollStatus::Finished,
-            "RUNNING" => PollStatus::Running(60),
+            "RUNNING" => PollStatus::Running(3),
+            "QUEUED" => PollStatus::Running(3),
             _ => PollStatus::Error,
         }
     }
@@ -113,5 +121,13 @@ impl Clustalo {
             write!(records, "{}", record).unwrap();
         }
         records
+    }
+
+    fn parse_fasta_result<'a>(
+        &'a self,
+        raw_results: &'a str,
+    ) -> Result<Records<BufReader<&[u8]>>, EbioticError> {
+        let reader = Reader::new(raw_results.as_bytes());
+        Ok(reader.records())
     }
 }

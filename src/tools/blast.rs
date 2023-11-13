@@ -4,7 +4,8 @@ use serde_json::Value;
 
 use super::BLAST_ENDPOINT;
 
-use crate::core::{self, PollStatus, Pollable};
+use crate::core::{self, PollStatus, PollableService};
+use crate::errors::EbioticError;
 
 #[derive(Deserialize, Debug)]
 struct Description {
@@ -33,7 +34,7 @@ struct Hit {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Search {
+pub struct BlastResult {
     query_id: String,
     query_title: String,
     query_len: u32,
@@ -85,7 +86,7 @@ impl Blast {
         }
     }
 
-    pub async fn run(&self, query: &str) -> Result<Search, ()> {
+    pub async fn run(&self, query: &str) -> Result<BlastResult, EbioticError> {
         let client = Client::new();
         let response = core::post_form(
             &self.endpoint,
@@ -101,8 +102,7 @@ impl Blast {
                 ("QUERY", query),
             ],
         )
-        .await
-        .unwrap();
+        .await?;
 
         let (rid, _rtoe) = self.fetch_ridrtoe(&response);
 
@@ -124,16 +124,17 @@ impl Blast {
                 client.clone(),
                 &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
             )
-            .await
-            .unwrap();
+            .await?;
             self.parse_raw_results(&search_results)
         } else {
-            panic!("Something went wrong with the job");
+            return Err(EbioticError::ServiceError(
+                "Something went wrong with the job".to_string(),
+            ));
         }
     }
 }
 
-impl Pollable for &Blast {
+impl PollableService for &Blast {
     fn poll_status(&self, response: &str) -> PollStatus {
         for line in response.lines() {
             let trimmed_line = line.trim_start();
@@ -152,15 +153,17 @@ impl Pollable for &Blast {
 
 impl Blast {
     // TODO: add error handling
-    fn parse_raw_results(&self, raw_results: &str) -> Result<Search, ()> {
-        let parsed: Value = serde_json::from_str(raw_results).unwrap();
+    fn parse_raw_results(&self, raw_results: &str) -> Result<BlastResult, EbioticError> {
+        let parsed: Value = serde_json::from_str(raw_results)?;
         let flat = &parsed["BlastOutput2"][0]["report"]["results"]["search"];
 
         if flat != &Value::Null {
-            let search: Search = serde_json::from_value(flat.clone()).unwrap();
+            let search: BlastResult = serde_json::from_value(flat.clone())?;
             Ok(search)
         } else {
-            panic!("No results found");
+            Err(EbioticError::ServiceError(
+                "No results were found.".to_string(),
+            ))
         }
     }
 

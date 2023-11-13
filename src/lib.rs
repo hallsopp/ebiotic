@@ -1,3 +1,3 @@
-pub mod tools;
-// pub mod blast;
 mod core;
+mod errors;
+pub mod tools;

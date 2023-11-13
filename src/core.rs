@@ -1,5 +1,8 @@
-use reqwest::{Client, Result};
+use reqwest::Client;
+use reqwest::Result as ReqwestResult;
 use tokio::time::{self, Duration};
+
+use crate::errors::EbioticError;
 
 pub(crate) enum PollStatus {
     Finished,
@@ -7,15 +10,21 @@ pub(crate) enum PollStatus {
     Error,
 }
 
-pub(crate) trait Pollable {
+pub(crate) trait PollableService {
     fn poll_status(&self, response: &str) -> PollStatus;
 }
+
+// Waiting for stabilization of async traits to be able to use this
+// pub(crate) trait Service {
+//     type ResultType;
+//     async fn run(&self) -> Result<Self::ResultType, EbioticError>;
+// }
 
 pub(crate) async fn post_form(
     endpoint: &str,
     client: Client,
     body: &[(&str, &str)],
-) -> Result<String> {
+) -> ReqwestResult<String> {
     client.post(endpoint).form(body).send().await?.text().await
 }
 
@@ -25,9 +34,9 @@ pub(crate) async fn poll<F>(
     client: Client,
     post_body: Option<&[(&str, &str)]>,
     method_caller: &F,
-) -> Result<String>
+) -> ReqwestResult<String>
 where
-    F: Pollable,
+    F: PollableService,
 {
     loop {
         let response;
