@@ -8,4 +8,6 @@ pub enum EbioticError {
     ParseError(#[from] serde_json::Error),
     #[error("Error: {0}")]
     ServiceError(String),
+    #[error("Unable to parse Float from Str: {0}")]
+    ParseFloatError(#[from] std::num::ParseFloatError),
 }

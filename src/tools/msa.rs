@@ -1,6 +1,6 @@
 use reqwest::Client;
 use std::fmt::Write;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 
 use super::TOOLS_ENDPOINT;
 use crate::core::{self, PollStatus, PollableService};
@@ -14,11 +14,11 @@ pub struct Clustalo {
     sequences: Vec<Record>,
 }
 
-pub struct ClustaloResult<'a> {
+pub struct ClustaloResult<B: BufRead> {
     aln_clustal_num: String,
-    pim: String,
+    pim: Vec<Vec<f64>>,
     phylotree: String,
-    fasta: Records<BufReader<&'a [u8]>>,
+    fasta: Records<B>,
 }
 
 impl Default for Clustalo {
@@ -64,7 +64,7 @@ impl Clustalo {
         &self.sequences
     }
 
-    pub async fn run(&self) -> Result<String, EbioticError> {
+    pub async fn run<B: std::io::BufRead>(&self) -> Result<ClustaloResult<B>, EbioticError> {
         let client = Client::new();
 
         let run_endpoint = format!("{}{}", self.endpoint, "run/");
@@ -84,7 +84,7 @@ impl Clustalo {
         let search = core::poll(&poll_endpoint, client.clone(), None, &self).await;
 
         if search.is_ok() {
-            let results = client
+            let acn = client
                 .get(&format!(
                     "{}{}{}{}",
                     self.endpoint, "result/", &response, "/aln-clustal_num"
@@ -93,6 +93,43 @@ impl Clustalo {
                 .await?
                 .text()
                 .await?;
+
+            let pim = client
+                .get(&format!(
+                    "{}{}{}{}",
+                    self.endpoint, "result/", &response, "/pim"
+                ))
+                .send()
+                .await?
+                .text()
+                .await?;
+
+            let phylotree = client
+                .get(&format!(
+                    "{}{}{}{}",
+                    self.endpoint, "result/", &response, "/phylotree"
+                ))
+                .send()
+                .await?
+                .text()
+                .await?;
+
+            let fasta = client
+                .get(&format!(
+                    "{}{}{}{}",
+                    self.endpoint, "result/", &response, "/clustal_num"
+                ))
+                .send()
+                .await?
+                .text()
+                .await?;
+
+            let results = ClustaloResult {
+                aln_clustal_num: acn,
+                pim: self.parse_pim_result(&pim)?,
+                phylotree: phylotree,
+                fasta: self.parse_fasta_result(&fasta)?,
+            };
 
             return Ok(results);
         } else {
@@ -129,5 +166,20 @@ impl Clustalo {
     ) -> Result<Records<BufReader<&[u8]>>, EbioticError> {
         let reader = Reader::new(raw_results.as_bytes());
         Ok(reader.records())
+    }
+
+    fn parse_pim_result(&self, raw_results: &str) -> Result<Vec<Vec<f64>>, EbioticError> {
+        let mut pim = Vec::new();
+        for line in raw_results.lines() {
+            if line.trim().starts_with("#") || line.trim().is_empty() {
+                continue;
+            }
+            let mut row = Vec::new();
+            for value in line.split_whitespace() {
+                row.push(value.parse::<f64>()?);
+            }
+            pim.push(row);
+        }
+        Ok(pim)
     }
 }
