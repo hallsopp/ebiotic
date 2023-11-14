@@ -191,6 +191,6 @@ mod tests {
     fn test_parse_raw_results() {
         let test_json = include_str!("../../tests/example_blast_response.json");
         let blast = Blast::default();
-        Blast::parse_raw_results(&blast, test_json);
+        blast.parse_raw_results(test_json).unwrap();
     }
 }

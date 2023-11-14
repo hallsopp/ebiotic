@@ -22,7 +22,7 @@ the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-ebiotic = "0.0.1"
+ebiotic = "0.0.11"
 ```
 
 ## TODO

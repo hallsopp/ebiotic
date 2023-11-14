@@ -1,6 +1,6 @@
 use reqwest::Client;
 use std::fmt::Write;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, Cursor};
 
 use super::TOOLS_ENDPOINT;
 use crate::core::{self, PollStatus, PollableService};
@@ -14,11 +14,11 @@ pub struct Clustalo {
     sequences: Vec<Record>,
 }
 
-pub struct ClustaloResult<B: BufRead> {
+pub struct ClustaloResult {
     aln_clustal_num: String,
     pim: Vec<Vec<f64>>,
     phylotree: String,
-    fasta: Records<B>,
+    fasta: Vec<Record>,
 }
 
 impl Default for Clustalo {
@@ -64,7 +64,7 @@ impl Clustalo {
         &self.sequences
     }
 
-    pub async fn run<B: std::io::BufRead>(&self) -> Result<ClustaloResult<B>, EbioticError> {
+    pub async fn run(&self) -> Result<ClustaloResult, EbioticError> {
         let client = Client::new();
 
         let run_endpoint = format!("{}{}", self.endpoint, "run/");
@@ -160,12 +160,16 @@ impl Clustalo {
         records
     }
 
-    fn parse_fasta_result<'a>(
-        &'a self,
-        raw_results: &'a str,
-    ) -> Result<Records<BufReader<&[u8]>>, EbioticError> {
-        let reader = Reader::new(raw_results.as_bytes());
-        Ok(reader.records())
+    fn parse_fasta_result(&self, raw_results: &str) -> Result<Vec<Record>, EbioticError> {
+        let cursor = Cursor::new(raw_results.as_bytes());
+        let reader = Reader::from_bufread(cursor);
+
+        let records = reader
+            .records()
+            .collect::<Result<Vec<_>, std::io::Error>>()
+            .map_err(EbioticError::from)?;
+
+        Ok(records)
     }
 
     fn parse_pim_result(&self, raw_results: &str) -> Result<Vec<Vec<f64>>, EbioticError> {
@@ -181,5 +185,53 @@ impl Clustalo {
             pim.push(row);
         }
         Ok(pim)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_pim() {
+        let clustalo = Clustalo::default();
+
+        let pim_string = "
+        0.000000 0.000000 0.000000 0.000000
+        0.000000 0.000000 0.000000 0.000000
+        0.000000 0.000000 0.000000 0.000000
+        0.000000 0.000000 0.000000 0.000000
+        ";
+
+        let pim = clustalo.parse_pim_result(&pim_string);
+
+        assert_eq!(pim.is_ok(), true);
+        assert_eq!(
+            pim.unwrap(),
+            vec![
+                vec![0.0, 0.0, 0.0, 0.0],
+                vec![0.0, 0.0, 0.0, 0.0],
+                vec![0.0, 0.0, 0.0, 0.0],
+                vec![0.0, 0.0, 0.0, 0.0]
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_fasta() {
+        let clustalo = Clustalo::default();
+        let fasta_string = ">seq1
+AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA
+>seq2
+TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA
+>seq3
+GCTAGTCCGATGCGTACGATCGTACGATGCTAGCTAGCTAGCTAGCTAGCTA
+>seq4
+CGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA";
+
+        let fasta = clustalo.parse_fasta_result(&fasta_string);
+
+        assert_eq!(fasta.is_ok(), true);
+        assert_eq!(fasta.unwrap().len(), 4);
     }
 }
