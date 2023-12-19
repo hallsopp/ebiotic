@@ -116,21 +116,15 @@ impl Blast {
             ]),
             &self,
         )
-        .await;
+        .await?;
 
-        if search_info.is_ok() {
-            let search_results = core::post_form(
-                &self.endpoint,
-                client.clone(),
-                &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
-            )
-            .await?;
-            self.parse_raw_results(&search_results)
-        } else {
-            return Err(EbioticError::ServiceError(
-                "Something went wrong with the job".to_string(),
-            ));
-        }
+        let search_results = core::post_form(
+            &self.endpoint,
+            client.clone(),
+            &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
+        )
+        .await?;
+        self.parse_raw_results(&search_results)
     }
 }
 
@@ -147,12 +141,13 @@ impl PollableService for &Blast {
                 }
             }
         }
-        PollStatus::Error
+        PollStatus::Error(EbioticError::ServiceError(
+            "Something went wrong with the job".to_string(),
+        ))
     }
 }
 
 impl Blast {
-    // TODO: add error handling
     fn parse_raw_results(&self, raw_results: &str) -> Result<BlastResult, EbioticError> {
         let parsed: Value = serde_json::from_str(raw_results)?;
         let flat = &parsed["BlastOutput2"][0]["report"]["results"]["search"];
@@ -167,7 +162,6 @@ impl Blast {
         }
     }
 
-    // TODO: add error handling
     fn fetch_ridrtoe(&self, response: &str) -> (String, String) {
         let mut rid = String::new();
         let mut rtoe = String::new();

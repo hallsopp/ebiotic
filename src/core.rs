@@ -7,7 +7,7 @@ use crate::errors::EbioticError;
 pub(crate) enum PollStatus {
     Finished,
     Running(u64),
-    Error,
+    Error(EbioticError),
 }
 
 pub(crate) trait PollableService {
@@ -24,8 +24,9 @@ pub(crate) async fn post_form(
     endpoint: &str,
     client: Client,
     body: &[(&str, &str)],
-) -> ReqwestResult<String> {
-    client.post(endpoint).form(body).send().await?.text().await
+) -> Result<String, EbioticError> {
+    let response = client.post(endpoint).form(body).send().await?;
+    Ok(response.text().await?)
 }
 
 // Use this a feedback loop to check if the job is done
@@ -34,7 +35,7 @@ pub(crate) async fn poll<F>(
     client: Client,
     post_body: Option<&[(&str, &str)]>,
     method_caller: &F,
-) -> ReqwestResult<String>
+) -> Result<String, EbioticError>
 where
     F: PollableService,
 {
@@ -54,7 +55,7 @@ where
                 println!("Job is still running, sleeping for {} seconds", sleep_time);
                 time::sleep(Duration::from_secs(sleep_time)).await;
             }
-            PollStatus::Error => panic!("Something went wrong with the job"),
+            PollStatus::Error(err) => return Err(err),
         }
     }
 }

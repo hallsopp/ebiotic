@@ -1,4 +1,5 @@
 use reqwest::Client;
+use std::collections::HashMap;
 use std::fmt::Write;
 use std::io::{BufRead, Cursor};
 
@@ -7,6 +8,7 @@ use crate::core::{self, PollStatus, PollableService};
 use crate::errors::EbioticError;
 
 pub use bio::io::fasta::{Reader, Record, Records};
+use serde::Deserialize;
 
 pub struct Clustalo {
     endpoint: String,
@@ -14,9 +16,10 @@ pub struct Clustalo {
     sequences: Vec<Record>,
 }
 
+#[derive(Debug)]
 pub struct ClustaloResult {
     aln_clustal_num: String,
-    pim: Vec<Vec<f64>>,
+    pim: HashMap<String, Vec<f64>>,
     phylotree: String,
     fasta: Vec<Record>,
 }
@@ -81,62 +84,59 @@ impl Clustalo {
 
         let poll_endpoint = format!("{}{}{}", &self.endpoint, &"status/", &response);
 
-        let search = core::poll(&poll_endpoint, client.clone(), None, &self).await;
+        // Polling to wait for the result, however result is not directly returned
+        let _ = core::poll(&poll_endpoint, client.clone(), None, &self).await;
 
-        if search.is_ok() {
-            let acn = client
-                .get(&format!(
-                    "{}{}{}{}",
-                    self.endpoint, "result/", &response, "/aln-clustal_num"
-                ))
-                .send()
-                .await?
-                .text()
-                .await?;
+        // Assuming the polling does not error out, the earlier response number
+        // can be used to fetch the results
+        let acn = client
+            .get(&format!(
+                "{}{}{}{}",
+                self.endpoint, "result/", &response, "/aln-clustal_num"
+            ))
+            .send()
+            .await?
+            .text()
+            .await?;
 
-            let pim = client
-                .get(&format!(
-                    "{}{}{}{}",
-                    self.endpoint, "result/", &response, "/pim"
-                ))
-                .send()
-                .await?
-                .text()
-                .await?;
+        let pim = client
+            .get(&format!(
+                "{}{}{}{}",
+                self.endpoint, "result/", &response, "/pim"
+            ))
+            .send()
+            .await?
+            .text()
+            .await?;
 
-            let phylotree = client
-                .get(&format!(
-                    "{}{}{}{}",
-                    self.endpoint, "result/", &response, "/phylotree"
-                ))
-                .send()
-                .await?
-                .text()
-                .await?;
+        let phylotree = client
+            .get(&format!(
+                "{}{}{}{}",
+                self.endpoint, "result/", &response, "/phylotree"
+            ))
+            .send()
+            .await?
+            .text()
+            .await?;
 
-            let fasta = client
-                .get(&format!(
-                    "{}{}{}{}",
-                    self.endpoint, "result/", &response, "/clustal_num"
-                ))
-                .send()
-                .await?
-                .text()
-                .await?;
+        let fasta = client
+            .get(&format!(
+                "{}{}{}{}",
+                self.endpoint, "result/", &response, "/clustal_num"
+            ))
+            .send()
+            .await?
+            .text()
+            .await?;
 
-            let results = ClustaloResult {
-                aln_clustal_num: acn,
-                pim: self.parse_pim_result(&pim)?,
-                phylotree: phylotree,
-                fasta: self.parse_fasta_result(&fasta)?,
-            };
+        let results = ClustaloResult {
+            aln_clustal_num: acn,
+            pim: self.parse_pim_result(&pim)?,
+            phylotree,
+            fasta: self.parse_fasta_result(&fasta)?,
+        };
 
-            return Ok(results);
-        } else {
-            return Err(EbioticError::ServiceError(
-                "Something went wrong with the job.".to_string(),
-            ));
-        }
+        return Ok(results);
     }
 }
 
@@ -146,7 +146,9 @@ impl PollableService for &Clustalo {
             "FINISHED" => PollStatus::Finished,
             "RUNNING" => PollStatus::Running(3),
             "QUEUED" => PollStatus::Running(3),
-            _ => PollStatus::Error,
+            _ => PollStatus::Error(EbioticError::ServiceError(
+                "Something went wrong with the job.".to_string(),
+            )),
         }
     }
 }
@@ -172,17 +174,33 @@ impl Clustalo {
         Ok(records)
     }
 
-    fn parse_pim_result(&self, raw_results: &str) -> Result<Vec<Vec<f64>>, EbioticError> {
-        let mut pim = Vec::new();
+    fn parse_pim_result(
+        &self,
+        raw_results: &str,
+    ) -> Result<HashMap<String, Vec<f64>>, EbioticError> {
+        let mut pim = HashMap::new();
         for line in raw_results.lines() {
             if line.trim().starts_with("#") || line.trim().is_empty() {
                 continue;
             }
             let mut row = Vec::new();
-            for value in line.split_whitespace() {
+            let split_line: Vec<&str> = line.split_whitespace().collect();
+            let sequence_name = split_line[1].to_string();
+            for value in &split_line[2..] {
                 row.push(value.parse::<f64>()?);
             }
-            pim.push(row);
+            if row.is_empty() {
+                return Err(EbioticError::ServiceError(format!(
+                    "No valid percentages found for sequence: {}",
+                    sequence_name
+                )));
+            }
+            pim.insert(sequence_name, row);
+        }
+        if pim.is_empty() {
+            return Err(EbioticError::ServiceError(
+                "No valid lines found in Percent Identity Matrix (PIM).".to_string(),
+            ));
         }
         Ok(pim)
     }
@@ -191,47 +209,128 @@ impl Clustalo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bio::io::fasta::Record;
+    use std::io::Cursor;
 
     #[test]
-    fn test_parse_pim() {
+    fn clustalo_new_creates_correct_instance() {
+        let endpoint = "http://example.com".to_string();
+        let email = "test@example.com".to_string();
+        let sequences = vec![Record::with_attrs(
+            "seq1",
+            None,
+            b"AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA",
+        )];
+
+        let clustalo = Clustalo::new(endpoint.clone(), email.clone(), sequences.clone());
+
+        assert_eq!(clustalo.endpoint(), &endpoint);
+        assert_eq!(clustalo.email(), &email);
+        assert_eq!(clustalo.sequences(), &sequences);
+    }
+
+    #[test]
+    fn clustalo_setters_update_fields_correctly() {
+        let mut clustalo = Clustalo::default();
+        let endpoint = "http://example.com".to_string();
+        let email = "test@example.com".to_string();
+        let sequences = vec![Record::with_attrs(
+            "seq1",
+            None,
+            b"AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA",
+        )];
+
+        clustalo.set_endpoint(endpoint.clone());
+        clustalo.set_email(email.clone());
+        clustalo.set_sequences(sequences.clone());
+
+        assert_eq!(clustalo.endpoint(), &endpoint);
+        assert_eq!(clustalo.email(), &email);
+        assert_eq!(clustalo.sequences(), &sequences);
+    }
+
+    #[test]
+    fn pretty_format_records_formats_correctly() {
+        let sequences = vec![
+            Record::with_attrs(
+                "seq1",
+                None,
+                b"AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA",
+            ),
+            Record::with_attrs(
+                "seq2",
+                None,
+                b"TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA",
+            ),
+        ];
+        let clustalo = Clustalo::new(
+            "http://example.com".to_string(),
+            "test@example.com".to_string(),
+            sequences,
+        );
+
+        let formatted = clustalo.pretty_format_records();
+
+        assert_eq!(formatted, ">seq1\nAGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA\n>seq2\nTACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA\n");
+    }
+
+    #[test]
+    fn parse_fasta_result_parses_correctly() {
         let clustalo = Clustalo::default();
+        let fasta_string = ">seq1\nAGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA\n>seq2\nTACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA";
 
-        let pim_string = "
-        0.000000 0.000000 0.000000 0.000000
-        0.000000 0.000000 0.000000 0.000000
-        0.000000 0.000000 0.000000 0.000000
-        0.000000 0.000000 0.000000 0.000000
-        ";
+        let fasta = clustalo.parse_fasta_result(&fasta_string).unwrap();
 
-        let pim = clustalo.parse_pim_result(&pim_string);
-
-        assert_eq!(pim.is_ok(), true);
+        assert_eq!(fasta.len(), 2);
+        assert_eq!(fasta[0].id(), "seq1");
         assert_eq!(
-            pim.unwrap(),
-            vec![
-                vec![0.0, 0.0, 0.0, 0.0],
-                vec![0.0, 0.0, 0.0, 0.0],
-                vec![0.0, 0.0, 0.0, 0.0],
-                vec![0.0, 0.0, 0.0, 0.0]
-            ]
+            fasta[0].seq(),
+            b"AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA"
+        );
+        assert_eq!(fasta[1].id(), "seq2");
+        assert_eq!(
+            fasta[1].seq(),
+            b"TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA"
         );
     }
 
     #[test]
-    fn test_parse_fasta() {
+    fn parse_pim_result_parses_correctly() {
         let clustalo = Clustalo::default();
-        let fasta_string = ">seq1
-AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA
->seq2
-TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA
->seq3
-GCTAGTCCGATGCGTACGATCGTACGATGCTAGCTAGCTAGCTAGCTAGCTA
->seq4
-CGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA";
+        let pim_string = "\
+        1: Sequence1   100.00   36.73   40.91   40.91   40.00
+        2: Sequence2    36.73  100.00   44.44   31.71   33.33
+        3: Sequence3    40.91   44.44  100.00   77.78   83.78
+        4: Sequence4    40.91   31.71   77.78  100.00   96.00
+        5: Sequence5    40.00   33.33   83.78   96.00  100.00";
+
+        let pim = clustalo.parse_pim_result(&pim_string).unwrap();
+
+        assert_eq!(pim.len(), 5);
+        assert_eq!(pim["Sequence1"], vec![100.00, 36.73, 40.91, 40.91, 40.00]);
+        assert_eq!(pim["Sequence2"], vec![36.73, 100.00, 44.44, 31.71, 33.33]);
+        assert_eq!(pim["Sequence3"], vec![40.91, 44.44, 100.00, 77.78, 83.78]);
+        assert_eq!(pim["Sequence4"], vec![40.91, 31.71, 77.78, 100.00, 96.00]);
+        assert_eq!(pim["Sequence5"], vec![40.00, 33.33, 83.78, 96.00, 100.00]);
+    }
+
+    #[test]
+    fn parse_pim_result_handles_invalid_input() {
+        let clustalo = Clustalo::default();
+        let pim_string = "invalid input";
+
+        let pim = clustalo.parse_pim_result(&pim_string);
+
+        assert!(pim.is_err());
+    }
+
+    #[test]
+    fn parse_fasta_result_handles_invalid_input() {
+        let clustalo = Clustalo::default();
+        let fasta_string = "invalid input";
 
         let fasta = clustalo.parse_fasta_result(&fasta_string);
 
-        assert_eq!(fasta.is_ok(), true);
-        assert_eq!(fasta.unwrap().len(), 4);
+        assert!(fasta.is_err());
     }
 }
