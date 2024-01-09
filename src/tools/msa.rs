@@ -4,7 +4,7 @@ use std::fmt::Write;
 use std::io::{BufRead, Cursor};
 
 use super::TOOLS_ENDPOINT;
-use crate::core::{self, PollStatus, PollableService};
+use crate::core::{self, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
 pub use bio::io::fasta::{Reader, Record, Records};
@@ -13,7 +13,6 @@ use serde::Deserialize;
 pub struct Clustalo {
     endpoint: String,
     email: String,
-    sequences: Vec<Record>,
 }
 
 #[derive(Debug)]
@@ -29,18 +28,13 @@ impl Default for Clustalo {
         Clustalo {
             endpoint: format!("{}{}", TOOLS_ENDPOINT.to_string(), "clustalo/"),
             email: "".to_string(),
-            sequences: Vec::new(),
         }
     }
 }
 
 impl Clustalo {
-    pub fn new(endpoint: String, email: String, sequences: Vec<Record>) -> Clustalo {
-        Clustalo {
-            endpoint,
-            email,
-            sequences,
-        }
+    pub fn new(endpoint: String, email: String) -> Clustalo {
+        Clustalo { endpoint, email }
     }
 
     pub fn set_endpoint(&mut self, endpoint: String) -> () {
@@ -51,10 +45,6 @@ impl Clustalo {
         self.email = email;
     }
 
-    pub fn set_sequences(&mut self, sequences: Vec<Record>) -> () {
-        self.sequences = sequences;
-    }
-
     pub fn endpoint(&self) -> &String {
         &self.endpoint
     }
@@ -62,22 +52,23 @@ impl Clustalo {
     pub fn email(&self) -> &String {
         &self.email
     }
+}
 
-    pub fn sequences(&self) -> &Vec<Record> {
-        &self.sequences
-    }
+impl Service for Clustalo {
+    type ResultType = ClustaloResult;
+    type InputType = Vec<Record>;
 
-    pub async fn run(&self) -> Result<ClustaloResult, EbioticError> {
+    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         let client = Client::new();
 
-        let run_endpoint = format!("{}{}", self.endpoint, "run/");
+        let run_endpoint = format!("{}{}", &self.endpoint, "run/");
 
         let response = core::post_form(
             &run_endpoint,
             client.clone(),
             &[
                 ("email", &self.email.as_str()),
-                ("sequence", &self.pretty_format_records().as_str()),
+                ("sequence", &self.pretty_format_records(input).as_str()),
             ],
         )
         .await?;
@@ -85,14 +76,14 @@ impl Clustalo {
         let poll_endpoint = format!("{}{}{}", &self.endpoint, &"status/", &response);
 
         // Polling to wait for the result, however result is not directly returned
-        let _ = core::poll(&poll_endpoint, client.clone(), None, &self).await;
+        let _ = core::poll(&poll_endpoint, client.clone(), None, &self).await?;
 
         // Assuming the polling does not error out, the earlier response number
         // can be used to fetch the results
         let acn = client
             .get(&format!(
                 "{}{}{}{}",
-                self.endpoint, "result/", &response, "/aln-clustal_num"
+                &self.endpoint, "result/", &response, "/aln-clustal_num"
             ))
             .send()
             .await?
@@ -102,7 +93,7 @@ impl Clustalo {
         let pim = client
             .get(&format!(
                 "{}{}{}{}",
-                self.endpoint, "result/", &response, "/pim"
+                &self.endpoint, "result/", &response, "/pim"
             ))
             .send()
             .await?
@@ -112,7 +103,7 @@ impl Clustalo {
         let phylotree = client
             .get(&format!(
                 "{}{}{}{}",
-                self.endpoint, "result/", &response, "/phylotree"
+                &self.endpoint, "result/", &response, "/phylotree"
             ))
             .send()
             .await?
@@ -122,7 +113,7 @@ impl Clustalo {
         let fasta = client
             .get(&format!(
                 "{}{}{}{}",
-                self.endpoint, "result/", &response, "/clustal_num"
+                &self.endpoint, "result/", &response, "/clustal_num"
             ))
             .send()
             .await?
@@ -154,9 +145,9 @@ impl PollableService for &Clustalo {
 }
 
 impl Clustalo {
-    fn pretty_format_records(&self) -> String {
+    fn pretty_format_records(&self, sequences: Vec<Record>) -> String {
         let mut records = String::new();
-        for record in &self.sequences {
+        for record in &sequences {
             write!(records, "{}", record).unwrap();
         }
         records
@@ -216,17 +207,11 @@ mod tests {
     fn clustalo_new_creates_correct_instance() {
         let endpoint = "http://example.com".to_string();
         let email = "test@example.com".to_string();
-        let sequences = vec![Record::with_attrs(
-            "seq1",
-            None,
-            b"AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA",
-        )];
 
-        let clustalo = Clustalo::new(endpoint.clone(), email.clone(), sequences.clone());
+        let clustalo = Clustalo::new(endpoint.clone(), email.clone());
 
         assert_eq!(clustalo.endpoint(), &endpoint);
         assert_eq!(clustalo.email(), &email);
-        assert_eq!(clustalo.sequences(), &sequences);
     }
 
     #[test]
@@ -234,19 +219,12 @@ mod tests {
         let mut clustalo = Clustalo::default();
         let endpoint = "http://example.com".to_string();
         let email = "test@example.com".to_string();
-        let sequences = vec![Record::with_attrs(
-            "seq1",
-            None,
-            b"AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA",
-        )];
 
         clustalo.set_endpoint(endpoint.clone());
         clustalo.set_email(email.clone());
-        clustalo.set_sequences(sequences.clone());
 
         assert_eq!(clustalo.endpoint(), &endpoint);
         assert_eq!(clustalo.email(), &email);
-        assert_eq!(clustalo.sequences(), &sequences);
     }
 
     #[test]
@@ -263,13 +241,9 @@ mod tests {
                 b"TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA",
             ),
         ];
-        let clustalo = Clustalo::new(
-            "http://example.com".to_string(),
-            "test@example.com".to_string(),
-            sequences,
-        );
+        let clustalo = Clustalo::default();
 
-        let formatted = clustalo.pretty_format_records();
+        let formatted = clustalo.pretty_format_records(sequences);
 
         assert_eq!(formatted, ">seq1\nAGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA\n>seq2\nTACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA\n");
     }

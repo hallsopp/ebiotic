@@ -31,3 +31,7 @@ ebiotic = "0.0.11"
 - [ ] Add more documentation
 - [ ] Add more examples
 - [ ] Remove `unwrap()`s, `panic!()`s, and `expect()`s and replace with custom error handling
+
+
+- Change Service trait so that users do not have to import
+- work on polishing existing services and adding new ones

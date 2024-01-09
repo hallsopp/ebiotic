@@ -1,10 +1,12 @@
+use bio::io::fasta::Record;
 use reqwest::Client;
+use serde::de::{Deserializer, Visitor};
 use serde::Deserialize;
 use serde_json::Value;
 
 use super::BLAST_ENDPOINT;
 
-use crate::core::{self, PollStatus, PollableService};
+use crate::core::{self, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
 #[derive(Deserialize, Debug)]
@@ -18,11 +20,13 @@ struct Description {
 
 #[derive(Deserialize, Debug)]
 struct Hsp {
+    num: u32,
     bit_score: f64,
     score: u32,
     evalue: f64,
     identity: u32,
-    hseq: String,
+    #[serde(deserialize_with = "deserialize_hseq")]
+    hseq: Record,
 }
 
 #[derive(Deserialize, Debug)]
@@ -49,6 +53,20 @@ pub struct Blast {
     hitlist_size: u32,
     email: String,
     tool: String,
+}
+
+fn deserialize_hseq<'de, D>(deserializer: D) -> Result<Record, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hseq_str = String::deserialize(deserializer)?;
+    // Potentially change the id to be linked to Hsp.num,
+    // but this is not possible as
+    Ok(Record::with_attrs(
+        "consensus_hsp_seq",
+        None,
+        hseq_str.as_bytes(),
+    ))
 }
 
 impl Default for Blast {
@@ -85,8 +103,13 @@ impl Blast {
             tool,
         }
     }
+}
 
-    pub async fn run(&self, query: &str) -> Result<BlastResult, EbioticError> {
+impl Service for Blast {
+    type ResultType = BlastResult;
+    type InputType = String;
+
+    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         let client = Client::new();
         let response = core::post_form(
             &self.endpoint,
@@ -99,12 +122,12 @@ impl Blast {
                 ("HITLIST_SIZE", &self.hitlist_size.to_string()),
                 ("EMAIL", &self.email),
                 ("TOOL", &self.tool),
-                ("QUERY", query),
+                ("QUERY", &input),
             ],
         )
         .await?;
 
-        let (rid, _rtoe) = self.fetch_ridrtoe(&response);
+        let (rid, _rtoe) = &self.fetch_ridrtoe(&response);
 
         let search_info = core::poll(
             &self.endpoint,

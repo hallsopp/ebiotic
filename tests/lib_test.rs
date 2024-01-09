@@ -1,3 +1,4 @@
+use ebiotic::core::Service;
 use ebiotic::tools::{Blast, Clustalo, Record};
 use tokio;
 
@@ -5,7 +6,7 @@ use tokio;
 async fn blast_run_with_valid_query_returns_expected_result() {
     let blast = Blast::default();
     let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
-    let result = blast.run(query).await;
+    let result = blast.run(query.to_string()).await;
 
     assert!(result.is_ok());
 }
@@ -14,7 +15,7 @@ async fn blast_run_with_valid_query_returns_expected_result() {
 async fn blast_run_with_empty_query_returns_error() {
     let blast = Blast::default();
     let query = "";
-    let result = blast.run(query).await;
+    let result = blast.run(query.to_string()).await;
 
     assert!(result.is_err());
 }
@@ -53,22 +54,19 @@ async fn clustalo_run_with_valid_sequences_returns_expected_result() {
             .as_ref(),
     );
 
-    clustalo.set_sequences(vec![seq1, seq2, seq3, seq4]);
-
-    let result = clustalo.run().await;
+    let result = clustalo.run(vec![seq1, seq2, seq3, seq4]).await;
 
     println!("{:?}", result);
 
-    // assert!(result.is_ok());
+    assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn clustalo_run_with_empty_sequences_returns_error() {
     let mut clustalo = Clustalo::default();
     clustalo.set_email("harryallsopp8@gmail.com".to_string());
-    clustalo.set_sequences(vec![]);
 
-    let result = clustalo.run().await;
+    let result = clustalo.run(vec![]).await;
 
     assert!(result.is_err());
 }

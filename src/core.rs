@@ -14,11 +14,12 @@ pub(crate) trait PollableService {
     fn poll_status(&self, response: &str) -> PollStatus;
 }
 
-// Waiting for stabilization of async traits to be able to use this
-// pub(crate) trait Service {
-//     type ResultType;
-//     async fn run(&self) -> Result<Self::ResultType, EbioticError>;
-// }
+pub trait Service {
+    type ResultType;
+    type InputType;
+
+    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError>;
+}
 
 pub(crate) async fn post_form(
     endpoint: &str,
