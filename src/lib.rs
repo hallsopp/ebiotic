@@ -1,3 +1,3 @@
-pub mod core;
+mod core;
 mod errors;
 pub mod tools;

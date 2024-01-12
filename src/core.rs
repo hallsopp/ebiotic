@@ -1,5 +1,4 @@
 use reqwest::Client;
-use reqwest::Result as ReqwestResult;
 use tokio::time::{self, Duration};
 
 use crate::errors::EbioticError;

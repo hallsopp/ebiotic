@@ -1,14 +1,12 @@
+use bio::io::fasta::{Reader, Record};
 use reqwest::Client;
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::io::{BufRead, Cursor};
+use std::io::Cursor;
 
-use super::TOOLS_ENDPOINT;
+use super::EBI_TOOLS_ENDPOINT;
 use crate::core::{self, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
-
-pub use bio::io::fasta::{Reader, Record, Records};
-use serde::Deserialize;
 
 pub struct Clustalo {
     endpoint: String,
@@ -20,13 +18,12 @@ pub struct ClustaloResult {
     aln_clustal_num: String,
     pim: HashMap<String, Vec<f64>>,
     phylotree: String,
-    fasta: Vec<Record>,
 }
 
 impl Default for Clustalo {
     fn default() -> Self {
         Clustalo {
-            endpoint: format!("{}{}", TOOLS_ENDPOINT.to_string(), "clustalo/"),
+            endpoint: format!("{}{}", EBI_TOOLS_ENDPOINT, "clustalo/"),
             email: "".to_string(),
         }
     }
@@ -37,11 +34,11 @@ impl Clustalo {
         Clustalo { endpoint, email }
     }
 
-    pub fn set_endpoint(&mut self, endpoint: String) -> () {
+    pub fn set_endpoint(&mut self, endpoint: String) {
         self.endpoint = endpoint;
     }
 
-    pub fn set_email(&mut self, email: String) -> () {
+    pub fn set_email(&mut self, email: String) {
         self.email = email;
     }
 
@@ -62,13 +59,16 @@ impl Service for Clustalo {
         let client = Client::new();
 
         let run_endpoint = format!("{}{}", &self.endpoint, "run/");
+        let sequences = self.pretty_format_records(input);
+
+        println!("{}", &sequences);
 
         let response = core::post_form(
             &run_endpoint,
             client.clone(),
             &[
                 ("email", &self.email.as_str()),
-                ("sequence", &self.pretty_format_records(input).as_str()),
+                ("sequence", &sequences.as_str()),
             ],
         )
         .await?;
@@ -110,24 +110,13 @@ impl Service for Clustalo {
             .text()
             .await?;
 
-        let fasta = client
-            .get(&format!(
-                "{}{}{}{}",
-                &self.endpoint, "result/", &response, "/clustal_num"
-            ))
-            .send()
-            .await?
-            .text()
-            .await?;
-
         let results = ClustaloResult {
             aln_clustal_num: acn,
             pim: self.parse_pim_result(&pim)?,
             phylotree,
-            fasta: self.parse_fasta_result(&fasta)?,
         };
 
-        return Ok(results);
+        Ok(results)
     }
 }
 
@@ -150,9 +139,10 @@ impl Clustalo {
         for record in &sequences {
             write!(records, "{}", record).unwrap();
         }
-        records
+        records.trim_end_matches('\n').to_string()
     }
 
+    // Can potentially use for the aln_clustal_num result, but for now is redundant
     fn parse_fasta_result(&self, raw_results: &str) -> Result<Vec<Record>, EbioticError> {
         let cursor = Cursor::new(raw_results.as_bytes());
         let reader = Reader::from_bufread(cursor);
@@ -171,7 +161,7 @@ impl Clustalo {
     ) -> Result<HashMap<String, Vec<f64>>, EbioticError> {
         let mut pim = HashMap::new();
         for line in raw_results.lines() {
-            if line.trim().starts_with("#") || line.trim().is_empty() {
+            if line.trim().starts_with('#') || line.trim().is_empty() {
                 continue;
             }
             let mut row = Vec::new();
@@ -200,8 +190,6 @@ impl Clustalo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bio::io::fasta::Record;
-    use std::io::Cursor;
 
     #[test]
     fn clustalo_new_creates_correct_instance() {
@@ -229,23 +217,39 @@ mod tests {
 
     #[test]
     fn pretty_format_records_formats_correctly() {
-        let sequences = vec![
-            Record::with_attrs(
-                "seq1",
-                None,
-                b"AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA",
-            ),
-            Record::with_attrs(
-                "seq2",
-                None,
-                b"TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA",
-            ),
-        ];
+        let seq1 = Record::with_attrs(
+            &"seq1".to_string(),
+            None,
+            "AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA"
+                .to_string()
+                .as_ref(),
+        );
+        let seq2 = Record::with_attrs(
+            &"seq2".to_string(),
+            None,
+            "TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA"
+                .to_string()
+                .as_ref(),
+        );
+        let seq3 = Record::with_attrs(
+            &"seq3".to_string(),
+            None,
+            "GCTAGTCCGATGCGTACGATCGTACGATGCTAGCTAGCTAGCTAGCTAGCTA"
+                .to_string()
+                .as_ref(),
+        );
+        let seq4 = Record::with_attrs(
+            &"seq4".to_string(),
+            None,
+            "CGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA"
+                .to_string()
+                .as_ref(),
+        );
         let clustalo = Clustalo::default();
 
-        let formatted = clustalo.pretty_format_records(sequences);
+        let formatted = clustalo.pretty_format_records(vec![seq1, seq2, seq3, seq4]);
 
-        assert_eq!(formatted, ">seq1\nAGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA\n>seq2\nTACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA\n");
+        assert_eq!(formatted, ">seq1\nAGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA\n>seq2\nTACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA\n>seq3\nGCTAGTCCGATGCGTACGATCGTACGATGCTAGCTAGCTAGCTAGCTAGCTA\n>seq4\nCGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA");
     }
 
     #[test]

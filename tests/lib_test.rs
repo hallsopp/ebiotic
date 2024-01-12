@@ -1,5 +1,4 @@
-use ebiotic::core::Service;
-use ebiotic::tools::{Blast, Clustalo, Record};
+use ebiotic::tools::*;
 use tokio;
 
 #[tokio::test]

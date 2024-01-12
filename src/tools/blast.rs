@@ -1,11 +1,10 @@
 use bio::io::fasta::Record;
 use reqwest::Client;
-use serde::de::{Deserializer, Visitor};
+use serde::de::Deserializer;
 use serde::Deserialize;
 use serde_json::Value;
 
 use super::BLAST_ENDPOINT;
-
 use crate::core::{self, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
@@ -103,6 +102,34 @@ impl Blast {
             tool,
         }
     }
+
+    pub fn set_endpoint(&mut self, endpoint: String) {
+        self.endpoint = endpoint;
+    }
+
+    pub fn set_program(&mut self, program: String) {
+        self.program = program;
+    }
+
+    pub fn set_database(&mut self, database: String) {
+        self.database = database;
+    }
+
+    pub fn set_matrix(&mut self, matrix: String) {
+        self.matrix = matrix;
+    }
+
+    pub fn set_hitlist_size(&mut self, hitlist_size: u32) {
+        self.hitlist_size = hitlist_size;
+    }
+
+    pub fn set_email(&mut self, email: String) {
+        self.email = email;
+    }
+
+    pub fn set_tool(&mut self, tool: String) {
+        self.tool = tool;
+    }
 }
 
 impl Service for Blast {
@@ -129,7 +156,7 @@ impl Service for Blast {
 
         let (rid, _rtoe) = &self.fetch_ridrtoe(&response);
 
-        let search_info = core::poll(
+        let _search_info = core::poll(
             &self.endpoint,
             client.clone(),
             Some(&[
@@ -209,5 +236,36 @@ mod tests {
         let test_json = include_str!("../../tests/example_blast_response.json");
         let blast = Blast::default();
         blast.parse_raw_results(test_json).unwrap();
+    }
+
+    #[test]
+    fn test_update_functions() {
+        let mut blast = Blast::new(
+            "endpoint".to_string(),
+            "program".to_string(),
+            "database".to_string(),
+            "matrix".to_string(),
+            10,
+            "email".to_string(),
+            "tool".to_string(),
+        );
+
+        // Update the values
+        blast.set_endpoint("new_endpoint".to_string());
+        blast.set_program("new_program".to_string());
+        blast.set_database("new_database".to_string());
+        blast.set_matrix("new_matrix".to_string());
+        blast.set_hitlist_size(20);
+        blast.set_email("new_email".to_string());
+        blast.set_tool("new_tool".to_string());
+
+        // Check that the values have been updated correctly
+        assert_eq!(blast.endpoint, "new_endpoint");
+        assert_eq!(blast.program, "new_program");
+        assert_eq!(blast.database, "new_database");
+        assert_eq!(blast.matrix, "new_matrix");
+        assert_eq!(blast.hitlist_size, 20);
+        assert_eq!(blast.email, "new_email");
+        assert_eq!(blast.tool, "new_tool");
     }
 }
