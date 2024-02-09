@@ -1,5 +1,6 @@
 use bio::io::fasta::Record;
 use reqwest::Client;
+
 use serde::de::Deserializer;
 use serde::Deserialize;
 use serde_json::Value;
@@ -60,7 +61,8 @@ where
 {
     let hseq_str = String::deserialize(deserializer)?;
     // Potentially change the id to be linked to Hsp.num,
-    // but this is not possible as
+    // but this is not possible as the context is not available
+    // in the deserializer
     Ok(Record::with_attrs(
         "consensus_hsp_seq",
         None,

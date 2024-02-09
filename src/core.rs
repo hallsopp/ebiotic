@@ -1,4 +1,6 @@
+use bio::io::fasta::{Reader, Record};
 use reqwest::Client;
+use std::io::Cursor;
 use tokio::time::{self, Duration};
 
 use crate::errors::EbioticError;
@@ -58,4 +60,16 @@ where
             PollStatus::Error(err) => return Err(err),
         }
     }
+}
+
+pub(crate) fn parse_fa_from_bufread(raw_results: &str) -> Result<Vec<Record>, EbioticError> {
+    let cursor = Cursor::new(raw_results.as_bytes());
+    let reader = Reader::from_bufread(cursor);
+
+    let records = reader
+        .records()
+        .collect::<Result<Vec<_>, std::io::Error>>()
+        .map_err(EbioticError::from)?;
+
+    Ok(records)
 }

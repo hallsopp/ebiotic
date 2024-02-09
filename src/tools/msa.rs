@@ -1,8 +1,8 @@
-use bio::io::fasta::{Reader, Record};
+use bio::io::fasta::Record;
 use reqwest::Client;
+
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::io::Cursor;
 
 use super::EBI_TOOLS_ENDPOINT;
 use crate::core::{self, PollStatus, PollableService, Service};
@@ -140,19 +140,6 @@ impl Clustalo {
             write!(records, "{}", record).unwrap();
         }
         records.trim_end_matches('\n').to_string()
-    }
-
-    // Can potentially use for the aln_clustal_num result, but for now is redundant
-    fn parse_fasta_result(&self, raw_results: &str) -> Result<Vec<Record>, EbioticError> {
-        let cursor = Cursor::new(raw_results.as_bytes());
-        let reader = Reader::from_bufread(cursor);
-
-        let records = reader
-            .records()
-            .collect::<Result<Vec<_>, std::io::Error>>()
-            .map_err(EbioticError::from)?;
-
-        Ok(records)
     }
 
     fn parse_pim_result(
