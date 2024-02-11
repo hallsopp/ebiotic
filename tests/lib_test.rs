@@ -1,3 +1,4 @@
+use ebiotic::data::*;
 use ebiotic::tools::*;
 use tokio;
 
@@ -68,4 +69,22 @@ async fn clustalo_run_with_empty_sequences_returns_error() {
     let result = clustalo.run(vec![]).await;
 
     assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_dbfetch() {
+    let mut dbfetch = Dbfetch::new(
+        "ena_sequence".to_string(),
+        DbfetchReturnFormat::Fasta,
+        "raw".to_string(),
+    );
+    let ids = DbfetchIds::new(vec![
+        "M10051".to_string(),
+        "K00650".to_string(),
+        "D87894".to_string(),
+        "AJ242600".to_string(),
+    ]);
+    let result = dbfetch.run(ids).await;
+    println!("{:?}", result);
+    assert!(result.is_ok());
 }

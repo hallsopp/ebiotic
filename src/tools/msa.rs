@@ -177,6 +177,7 @@ impl Clustalo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::parse_fa_from_bufread;
 
     #[test]
     fn clustalo_new_creates_correct_instance() {
@@ -241,10 +242,9 @@ mod tests {
 
     #[test]
     fn parse_fasta_result_parses_correctly() {
-        let clustalo = Clustalo::default();
         let fasta_string = ">seq1\nAGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA\n>seq2\nTACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA";
 
-        let fasta = clustalo.parse_fasta_result(&fasta_string).unwrap();
+        let fasta = parse_fa_from_bufread(&fasta_string).unwrap();
 
         assert_eq!(fasta.len(), 2);
         assert_eq!(fasta[0].id(), "seq1");
@@ -291,10 +291,9 @@ mod tests {
 
     #[test]
     fn parse_fasta_result_handles_invalid_input() {
-        let clustalo = Clustalo::default();
         let fasta_string = "invalid input";
 
-        let fasta = clustalo.parse_fasta_result(&fasta_string);
+        let fasta = parse_fa_from_bufread(&fasta_string);
 
         assert!(fasta.is_err());
     }

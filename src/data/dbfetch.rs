@@ -1,8 +1,10 @@
+use bio::io::fasta::Record;
 use reqwest::Client;
+
 use std::fmt::{Display, Formatter};
 
 use super::EBI_DBFETCH_ENDPOINT;
-use crate::core::Service;
+use crate::core::{self, parse_fa_from_bufread, Service};
 use crate::errors::EbioticError;
 
 pub struct Dbfetch {
@@ -20,11 +22,23 @@ pub enum DbfetchReturnFormat {
     Json,
 }
 
+pub enum DbfetchDbs {
+    EnaSequence,
+}
+
 impl Display for DbfetchReturnFormat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             DbfetchReturnFormat::Fasta => write!(f, "Fasta"),
             DbfetchReturnFormat::Json => write!(f, "Json"),
+        }
+    }
+}
+
+impl Display for DbfetchDbs {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DbfetchDbs::EnaSequence => write!(f, "ena_sequence"),
         }
     }
 }
@@ -47,6 +61,20 @@ impl Default for Dbfetch {
             return_format: DbfetchReturnFormat::Fasta,
             style: "raw".to_string(),
         }
+    }
+}
+
+impl DbfetchIds {
+    pub fn new(ids: Vec<String>) -> DbfetchIds {
+        DbfetchIds { ids }
+    }
+
+    pub fn set_ids(&mut self, ids: Vec<String>) {
+        self.ids = ids;
+    }
+
+    pub fn ids(&self) -> &Vec<String> {
+        &self.ids
     }
 }
 
@@ -99,5 +127,17 @@ impl Service for Dbfetch {
             .await?;
 
         return Ok(res.text().await?);
+    }
+}
+
+impl Dbfetch {
+    pub fn into_records(&self, response: String) -> Result<Vec<Record>, EbioticError> {
+        parse_fa_from_bufread(&response)
+    }
+}
+
+impl Dbfetch {
+    pub async fn run_into_records() {
+        todo!()
     }
 }
