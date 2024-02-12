@@ -8,7 +8,8 @@ enable access to the rich data and tools provided by institutes like the Europea
 Institute's ([(EBI)](https://www.ebi.ac.uk/))
 and the National Center for Biotechnology Information ([NCBI](https://www.ncbi.nlm.nih.gov/)). It's built to serialize
 and
-deserialze data using common formats like JSON and specialised bioinformatics formats like FASTA from
+deserialze data using common formats like JSON and specialised bioinformatics formats like FASTA using the `Record` data
+structure from
 the [rust-bio](https://rust-bio.github.io/) library.
 
 ## Current APIs
@@ -17,9 +18,9 @@ the [rust-bio](https://rust-bio.github.io/) library.
   - Web-BLAST (currently only supports protein searches as it was used for another project)
 - EBI
   - Job Dispatcher
-    - Clustal Omega (Needs tidying up)
+    - Clustal Omega (needs tidying up)
   - Knowledge & Data
-    - DBfetch (not yet implemented)
+    - DBfetch (bare-bones)
 
 # Installation
 

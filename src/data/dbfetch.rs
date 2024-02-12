@@ -10,7 +10,7 @@ use crate::errors::EbioticError;
 pub struct Dbfetch {
     db: String,
     return_format: DbfetchReturnFormat,
-    style: String,
+    style: DbfetchStyle,
 }
 
 pub struct DbfetchIds {
@@ -20,6 +20,11 @@ pub struct DbfetchIds {
 pub enum DbfetchReturnFormat {
     Fasta,
     Json,
+}
+
+pub enum DbfetchStyle {
+    Raw,
+    Html,
 }
 
 pub enum DbfetchDbs {
@@ -54,12 +59,11 @@ impl Display for DbfetchIds {
     }
 }
 
-impl Default for Dbfetch {
-    fn default() -> Self {
-        Dbfetch {
-            db: "".to_string(),
-            return_format: DbfetchReturnFormat::Fasta,
-            style: "raw".to_string(),
+impl Display for DbfetchStyle {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DbfetchStyle::Raw => write!(f, "raw"),
+            DbfetchStyle::Html => write!(f, "html"),
         }
     }
 }
@@ -79,11 +83,19 @@ impl DbfetchIds {
 }
 
 impl Dbfetch {
-    pub fn new(db: String, return_format: DbfetchReturnFormat, style: String) -> Dbfetch {
+    pub fn new(db: String, return_format: DbfetchReturnFormat, style: DbfetchStyle) -> Dbfetch {
         Dbfetch {
             db,
             return_format,
             style,
+        }
+    }
+
+    pub fn default_fasta(db: String) -> Dbfetch {
+        Dbfetch {
+            db,
+            return_format: DbfetchReturnFormat::Fasta,
+            style: DbfetchStyle::Raw,
         }
     }
 
@@ -95,7 +107,7 @@ impl Dbfetch {
         self.return_format = format;
     }
 
-    pub fn set_style(&mut self, style: String) {
+    pub fn set_style(&mut self, style: DbfetchStyle) {
         self.style = style;
     }
 
@@ -107,7 +119,7 @@ impl Dbfetch {
         &self.return_format
     }
 
-    pub fn style(&self) -> &String {
+    pub fn style(&self) -> &DbfetchStyle {
         &self.style
     }
 }
@@ -133,11 +145,5 @@ impl Service for Dbfetch {
 impl Dbfetch {
     pub fn into_records(&self, response: String) -> Result<Vec<Record>, EbioticError> {
         parse_fa_from_bufread(&response)
-    }
-}
-
-impl Dbfetch {
-    pub async fn run_into_records() {
-        todo!()
     }
 }
