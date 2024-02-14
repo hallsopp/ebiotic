@@ -8,7 +8,7 @@ use crate::core::{self, parse_fa_from_bufread, Service};
 use crate::errors::EbioticError;
 
 pub struct Dbfetch {
-    db: String,
+    db: DbfetchDbs,
     return_format: DbfetchReturnFormat,
     style: DbfetchStyle,
 }
@@ -83,7 +83,7 @@ impl DbfetchIds {
 }
 
 impl Dbfetch {
-    pub fn new(db: String, return_format: DbfetchReturnFormat, style: DbfetchStyle) -> Dbfetch {
+    pub fn new(db: DbfetchDbs, return_format: DbfetchReturnFormat, style: DbfetchStyle) -> Dbfetch {
         Dbfetch {
             db,
             return_format,
@@ -91,7 +91,7 @@ impl Dbfetch {
         }
     }
 
-    pub fn default_fasta(db: String) -> Dbfetch {
+    pub fn default_fasta(db: DbfetchDbs) -> Dbfetch {
         Dbfetch {
             db,
             return_format: DbfetchReturnFormat::Fasta,
@@ -99,7 +99,7 @@ impl Dbfetch {
         }
     }
 
-    pub fn set_db(&mut self, db: String) {
+    pub fn set_db(&mut self, db: DbfetchDbs) {
         self.db = db;
     }
 
@@ -111,7 +111,7 @@ impl Dbfetch {
         self.style = style;
     }
 
-    pub fn db(&self) -> &String {
+    pub fn db(&self) -> &DbfetchDbs {
         &self.db
     }
 

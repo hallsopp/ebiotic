@@ -45,8 +45,18 @@
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     let dbfetch = Dbfetch::default();
-//!     let result = dbfetch.run("uniprot", "P12345").await;
+//!     let dbfetch = Dbfetch::new(DbfetchDbs::EnaSequence, DbfetchReturnFormat::Fasta, DbfetchStyle::Raw);
+//!     let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
+//!     let result = dbfetch.run(ids).await;
+//! }
+//!
+//! // Or using the default fasta format
+//!
+//! #[tokio::main]
+//! async fn main_fasta() {
+//!    let dbfetch = Dbfetch::default_fasta(DbfetchDbs::EnaSequence);
+//!    let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
+//!    let result = dbfetch.run(ids).await;
 //! }
 //!```
 //!

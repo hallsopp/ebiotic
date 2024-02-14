@@ -1,6 +1,6 @@
 mod dbfetch;
 
-pub use dbfetch::{Dbfetch, DbfetchIds, DbfetchReturnFormat};
+pub use dbfetch::{Dbfetch, DbfetchDbs, DbfetchIds, DbfetchReturnFormat, DbfetchStyle};
 
 pub use crate::core::Service;
 
