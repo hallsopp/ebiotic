@@ -7,6 +7,7 @@ description = "A Rust crate for interacting with common bioinformatics tools fro
 license = "GPL-3.0"
 repository = "https://github.com/hallsopp/ebiotic"
 documentation = "https://docs.rs/ebiotic"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
