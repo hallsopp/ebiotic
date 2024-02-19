@@ -52,11 +52,11 @@ code-bases.
 
 ## Current APIs
 
-#### NCBI:
+### NCBI:
 
 - Web-BLAST (currently only supports protein searches as it was used for another project)
 
-#### EBI:
+### EBI:
 
 **Job Dispatcher:**
 
