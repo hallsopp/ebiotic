@@ -1,7 +1,9 @@
 use bio::io::fasta::{Reader, Record};
 use reqwest::Client;
-use std::io::Cursor;
 use tokio::time::{self, Duration};
+
+use std::future::Future;
+use std::io::Cursor;
 
 use crate::errors::EbioticError;
 
@@ -19,7 +21,10 @@ pub trait Service {
     type ResultType;
     type InputType;
 
-    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError>;
+    fn run(
+        &self,
+        input: Self::InputType,
+    ) -> impl Future<Output = Result<Self::ResultType, EbioticError>> + Send;
 }
 
 pub(crate) async fn post_form(

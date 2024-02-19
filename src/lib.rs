@@ -17,7 +17,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! ebiotic = "0.0.1"
+//! ebiotic = "0.0.2"
 //! ```
 //!
 //! ## Examples
@@ -38,7 +38,7 @@
 //! }
 //! ```
 //!
-//! And this is an example of how to use the `Dbfetch` service:
+//! And this is an example of how to use the `Dbfetch` service to query the European Nucleotide Archive (ENA) for a sequence in FASTA format:
 //!
 //! ```rust
 //! use ebiotic::data::*;
@@ -47,16 +47,19 @@
 //! async fn main() {
 //!     let dbfetch = Dbfetch::new(DbfetchDbs::EnaSequence, DbfetchReturnFormat::Fasta, DbfetchStyle::Raw);
 //!     let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
-//!     let result = dbfetch.run(ids).await;
+//!
+//!     // The `Dbfetch` service returns a `DbfetchResult` which can be converted into a `Vec<Record>` using the `into_records` method.
+//!     // I hope to provide a more ergonomic way of doing this in the future.
+//!     let result = dbfetch.run(ids).await.unwrap().into_records();
 //! }
 //!
-//! // Or using the default fasta format
+//! // This is also the default configuration for the `Dbfetch` service, so the above can be written as:
 //!
 //! #[tokio::main]
 //! async fn main_fasta() {
-//!    let dbfetch = Dbfetch::default_fasta(DbfetchDbs::EnaSequence);
+//!    let dbfetch = Dbfetch::default();
 //!    let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
-//!    let result = dbfetch.run(ids).await;
+//!    let result = dbfetch.run(ids).await.unwrap().into_records();
 //! }
 //!```
 //!

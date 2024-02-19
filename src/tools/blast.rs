@@ -9,8 +9,9 @@ use super::BLAST_ENDPOINT;
 use crate::core::{self, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
+/// The `Description` struct is used to specify the description of the hit.
 #[derive(Deserialize, Debug)]
-struct Description {
+pub struct Description {
     id: String,
     accession: String,
     title: String,
@@ -18,8 +19,9 @@ struct Description {
     sciname: String,
 }
 
+/// The `Hsp` struct is used to specify the High-scoring Segment Pair (HSP) of the hit.
 #[derive(Deserialize, Debug)]
-struct Hsp {
+pub struct Hsp {
     num: u32,
     bit_score: f64,
     score: u32,
@@ -29,14 +31,16 @@ struct Hsp {
     hseq: Record,
 }
 
+/// The `Hit` struct is used to specify the hit from the BLAST search.
 #[derive(Deserialize, Debug)]
-struct Hit {
+pub struct Hit {
     num: u32,
     description: Vec<Description>,
     len: u32,
     hsps: Vec<Hsp>,
 }
 
+/// The `BlastResult` struct is used to specify the result of the BLAST search.
 #[derive(Deserialize, Debug)]
 pub struct BlastResult {
     query_id: String,
@@ -45,6 +49,7 @@ pub struct BlastResult {
     hits: Vec<Hit>,
 }
 
+/// The `Blast` struct is used to specify the parameters for the `Blast` service.
 pub struct Blast {
     endpoint: String,
     program: String,
@@ -134,10 +139,95 @@ impl Blast {
     }
 }
 
+impl BlastResult {
+    pub fn query_id(&self) -> &String {
+        &self.query_id
+    }
+
+    pub fn query_title(&self) -> &String {
+        &self.query_title
+    }
+
+    pub fn query_len(&self) -> &u32 {
+        &self.query_len
+    }
+
+    pub fn hits(&self) -> &Vec<Hit> {
+        &self.hits
+    }
+}
+
+impl Hit {
+    pub fn num(&self) -> &u32 {
+        &self.num
+    }
+
+    pub fn description(&self) -> &Vec<Description> {
+        &self.description
+    }
+
+    pub fn len(&self) -> &u32 {
+        &self.len
+    }
+
+    pub fn hsps(&self) -> &Vec<Hsp> {
+        &self.hsps
+    }
+}
+
+impl Hsp {
+    pub fn num(&self) -> &u32 {
+        &self.num
+    }
+
+    pub fn bit_score(&self) -> &f64 {
+        &self.bit_score
+    }
+
+    pub fn score(&self) -> &u32 {
+        &self.score
+    }
+
+    pub fn evalue(&self) -> &f64 {
+        &self.evalue
+    }
+
+    pub fn identity(&self) -> &u32 {
+        &self.identity
+    }
+
+    pub fn hseq(&self) -> &Record {
+        &self.hseq
+    }
+}
+
+impl Description {
+    pub fn id(&self) -> &String {
+        &self.id
+    }
+
+    pub fn accession(&self) -> &String {
+        &self.accession
+    }
+
+    pub fn title(&self) -> &String {
+        &self.title
+    }
+
+    pub fn taxid(&self) -> &u32 {
+        &self.taxid
+    }
+
+    pub fn sciname(&self) -> &String {
+        &self.sciname
+    }
+}
+
 impl Service for Blast {
     type ResultType = BlastResult;
     type InputType = String;
 
+    /// Run the `Blast` service with a query.
     async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         let client = Client::new();
         let response = core::post_form(

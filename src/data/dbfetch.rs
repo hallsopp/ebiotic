@@ -4,24 +4,33 @@ use reqwest::Client;
 use std::fmt::{Display, Formatter};
 
 use super::EBI_DBFETCH_ENDPOINT;
-use crate::core::{self, parse_fa_from_bufread, Service};
+use crate::core::{self, Service};
 use crate::errors::EbioticError;
 
+/// The `Dbfetch` struct is used to specify the parameters for the `Dbfetch` service.
 pub struct Dbfetch {
     db: DbfetchDbs,
     return_format: DbfetchReturnFormat,
     style: DbfetchStyle,
 }
 
+/// The `DbfetchIds` struct is used to specify the IDs to be fetched from the `Dbfetch` service.
 pub struct DbfetchIds {
     ids: Vec<String>,
 }
 
+#[derive(Debug)]
+pub struct DbfetchResult {
+    data: String,
+}
+
+/// The `DbfetchReturnFormat` enum is used to specify the return format of the `Dbfetch` service. This is dependent on the type of data available from the database.
 pub enum DbfetchReturnFormat {
     Fasta,
     Json,
 }
 
+/// The `DbfetchStyle` enum is used to specify the style of the return data from the `Dbfetch` service.
 pub enum DbfetchStyle {
     Raw,
     Html,
@@ -53,7 +62,7 @@ impl Display for DbfetchIds {
         let mut ids = String::new();
         for id in &self.ids {
             ids.push_str(id);
-            ids.push_str(",");
+            ids.push(',');
         }
         write!(f, "{}", ids)
     }
@@ -68,7 +77,34 @@ impl Display for DbfetchStyle {
     }
 }
 
+impl Default for Dbfetch {
+    fn default() -> Self {
+        Dbfetch {
+            db: DbfetchDbs::EnaSequence,
+            return_format: DbfetchReturnFormat::Fasta,
+            style: DbfetchStyle::Raw,
+        }
+    }
+}
+
+impl DbfetchResult {
+    fn new(data: String) -> DbfetchResult {
+        DbfetchResult { data }
+    }
+
+    /// Convert the results of a `Dbfetch` service into a `Vec<Record>`.
+    pub fn into_records(self) -> Result<Vec<Record>, EbioticError> {
+        core::parse_fa_from_bufread(&self.data)
+    }
+
+    /// Get the raw data from the `Dbfetch` service. This is useful if you want to handle the data yourself.
+    pub fn data(self) -> String {
+        self.data
+    }
+}
+
 impl DbfetchIds {
+    /// Create a new `DbfetchIds` object with a list of IDs.
     pub fn new(ids: Vec<String>) -> DbfetchIds {
         DbfetchIds { ids }
     }
@@ -88,14 +124,6 @@ impl Dbfetch {
             db,
             return_format,
             style,
-        }
-    }
-
-    pub fn default_fasta(db: DbfetchDbs) -> Dbfetch {
-        Dbfetch {
-            db,
-            return_format: DbfetchReturnFormat::Fasta,
-            style: DbfetchStyle::Raw,
         }
     }
 
@@ -125,9 +153,10 @@ impl Dbfetch {
 }
 
 impl Service for Dbfetch {
-    type ResultType = String;
+    type ResultType = DbfetchResult;
     type InputType = DbfetchIds;
 
+    /// Run the `Dbfetch` service with a list of IDs.
     async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         let client = Client::new();
         let res = client
@@ -138,12 +167,6 @@ impl Service for Dbfetch {
             .send()
             .await?;
 
-        return Ok(res.text().await?);
-    }
-}
-
-impl Dbfetch {
-    pub fn into_records(&self, response: String) -> Result<Vec<Record>, EbioticError> {
-        parse_fa_from_bufread(&response)
+        Ok(DbfetchResult::new(res.text().await?))
     }
 }

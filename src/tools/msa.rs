@@ -8,11 +8,13 @@ use super::EBI_TOOLS_ENDPOINT;
 use crate::core::{self, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
+/// The `Clustalo` struct is used to specify the parameters for the `Clustalo` service.
 pub struct Clustalo {
     endpoint: String,
     email: String,
 }
 
+/// The `ClustaloResult` struct is used to specify the result of the `Clustalo` service.
 #[derive(Debug)]
 pub struct ClustaloResult {
     aln_clustal_num: String,
@@ -51,10 +53,25 @@ impl Clustalo {
     }
 }
 
+impl ClustaloResult {
+    pub fn aln_clustal_num(&self) -> &String {
+        &self.aln_clustal_num
+    }
+
+    pub fn pim(&self) -> &HashMap<String, Vec<f64>> {
+        &self.pim
+    }
+
+    pub fn phylotree(&self) -> &String {
+        &self.phylotree
+    }
+}
+
 impl Service for Clustalo {
     type ResultType = ClustaloResult;
     type InputType = Vec<Record>;
 
+    /// Run the `Clustalo` service with the given input.
     async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         let client = Client::new();
 
