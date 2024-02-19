@@ -1,6 +1,6 @@
 [package]
 name = "ebiotic"
-version = "0.0.2"
+version = "0.0.21"
 edition = "2021"
 authors = ["Harry Allsopp <harryallsopp8@gmail.com>"]
 description = "A Rust crate for interacting with common bioinformatics tools from the EBI and NCBI."
