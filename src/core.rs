@@ -1,22 +1,39 @@
-use reqwest::{Client, Result};
+use bio::io::fasta::{Reader, Record};
+use reqwest::Client;
 use tokio::time::{self, Duration};
+
+use std::future::Future;
+use std::io::Cursor;
+
+use crate::errors::EbioticError;
 
 pub(crate) enum PollStatus {
     Finished,
     Running(u64),
-    Error,
+    Error(EbioticError),
 }
 
-pub(crate) trait Pollable {
+pub(crate) trait PollableService {
     fn poll_status(&self, response: &str) -> PollStatus;
+}
+
+pub trait Service {
+    type ResultType;
+    type InputType;
+
+    fn run(
+        &self,
+        input: Self::InputType,
+    ) -> impl Future<Output = Result<Self::ResultType, EbioticError>> + Send;
 }
 
 pub(crate) async fn post_form(
     endpoint: &str,
     client: Client,
     body: &[(&str, &str)],
-) -> Result<String> {
-    client.post(endpoint).form(body).send().await?.text().await
+) -> Result<String, EbioticError> {
+    let response = client.post(endpoint).form(body).send().await?;
+    Ok(response.text().await?)
 }
 
 // Use this a feedback loop to check if the job is done
@@ -25,9 +42,9 @@ pub(crate) async fn poll<F>(
     client: Client,
     post_body: Option<&[(&str, &str)]>,
     method_caller: &F,
-) -> Result<String>
+) -> Result<String, EbioticError>
 where
-    F: Pollable,
+    F: PollableService,
 {
     loop {
         let response;
@@ -45,7 +62,19 @@ where
                 println!("Job is still running, sleeping for {} seconds", sleep_time);
                 time::sleep(Duration::from_secs(sleep_time)).await;
             }
-            PollStatus::Error => panic!("Something went wrong with the job"),
+            PollStatus::Error(err) => return Err(err),
         }
     }
+}
+
+pub(crate) fn parse_fa_from_bufread(raw_results: &str) -> Result<Vec<Record>, EbioticError> {
+    let cursor = Cursor::new(raw_results.as_bytes());
+    let reader = Reader::from_bufread(cursor);
+
+    let records = reader
+        .records()
+        .collect::<Result<Vec<_>, std::io::Error>>()
+        .map_err(EbioticError::from)?;
+
+    Ok(records)
 }

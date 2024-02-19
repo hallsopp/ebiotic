@@ -1,13 +1,17 @@
+use bio::io::fasta::Record;
 use reqwest::Client;
+
+use serde::de::Deserializer;
 use serde::Deserialize;
 use serde_json::Value;
 
 use super::BLAST_ENDPOINT;
+use crate::core::{self, PollStatus, PollableService, Service};
+use crate::errors::EbioticError;
 
-use crate::core::{self, PollStatus, Pollable};
-
+/// The `Description` struct is used to specify the description of the hit.
 #[derive(Deserialize, Debug)]
-struct Description {
+pub struct Description {
     id: String,
     accession: String,
     title: String,
@@ -15,31 +19,37 @@ struct Description {
     sciname: String,
 }
 
+/// The `Hsp` struct is used to specify the High-scoring Segment Pair (HSP) of the hit.
 #[derive(Deserialize, Debug)]
-struct Hsp {
+pub struct Hsp {
+    num: u32,
     bit_score: f64,
     score: u32,
     evalue: f64,
     identity: u32,
-    hseq: String,
+    #[serde(deserialize_with = "deserialize_hseq")]
+    hseq: Record,
 }
 
+/// The `Hit` struct is used to specify the hit from the BLAST search.
 #[derive(Deserialize, Debug)]
-struct Hit {
+pub struct Hit {
     num: u32,
     description: Vec<Description>,
     len: u32,
     hsps: Vec<Hsp>,
 }
 
+/// The `BlastResult` struct is used to specify the result of the BLAST search.
 #[derive(Deserialize, Debug)]
-pub struct Search {
+pub struct BlastResult {
     query_id: String,
     query_title: String,
     query_len: u32,
     hits: Vec<Hit>,
 }
 
+/// The `Blast` struct is used to specify the parameters for the `Blast` service.
 pub struct Blast {
     endpoint: String,
     program: String,
@@ -48,6 +58,21 @@ pub struct Blast {
     hitlist_size: u32,
     email: String,
     tool: String,
+}
+
+fn deserialize_hseq<'de, D>(deserializer: D) -> Result<Record, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hseq_str = String::deserialize(deserializer)?;
+    // Potentially change the id to be linked to Hsp.num,
+    // but this is not possible as the context is not available
+    // in the deserializer
+    Ok(Record::with_attrs(
+        "consensus_hsp_seq",
+        None,
+        hseq_str.as_bytes(),
+    ))
 }
 
 impl Default for Blast {
@@ -85,7 +110,125 @@ impl Blast {
         }
     }
 
-    pub async fn run(&self, query: &str) -> Result<Search, ()> {
+    pub fn set_endpoint(&mut self, endpoint: String) {
+        self.endpoint = endpoint;
+    }
+
+    pub fn set_program(&mut self, program: String) {
+        self.program = program;
+    }
+
+    pub fn set_database(&mut self, database: String) {
+        self.database = database;
+    }
+
+    pub fn set_matrix(&mut self, matrix: String) {
+        self.matrix = matrix;
+    }
+
+    pub fn set_hitlist_size(&mut self, hitlist_size: u32) {
+        self.hitlist_size = hitlist_size;
+    }
+
+    pub fn set_email(&mut self, email: String) {
+        self.email = email;
+    }
+
+    pub fn set_tool(&mut self, tool: String) {
+        self.tool = tool;
+    }
+}
+
+impl BlastResult {
+    pub fn query_id(&self) -> &String {
+        &self.query_id
+    }
+
+    pub fn query_title(&self) -> &String {
+        &self.query_title
+    }
+
+    pub fn query_len(&self) -> &u32 {
+        &self.query_len
+    }
+
+    pub fn hits(&self) -> &Vec<Hit> {
+        &self.hits
+    }
+}
+
+impl Hit {
+    pub fn num(&self) -> &u32 {
+        &self.num
+    }
+
+    pub fn description(&self) -> &Vec<Description> {
+        &self.description
+    }
+
+    pub fn len(&self) -> &u32 {
+        &self.len
+    }
+
+    pub fn hsps(&self) -> &Vec<Hsp> {
+        &self.hsps
+    }
+}
+
+impl Hsp {
+    pub fn num(&self) -> &u32 {
+        &self.num
+    }
+
+    pub fn bit_score(&self) -> &f64 {
+        &self.bit_score
+    }
+
+    pub fn score(&self) -> &u32 {
+        &self.score
+    }
+
+    pub fn evalue(&self) -> &f64 {
+        &self.evalue
+    }
+
+    pub fn identity(&self) -> &u32 {
+        &self.identity
+    }
+
+    pub fn hseq(&self) -> &Record {
+        &self.hseq
+    }
+}
+
+impl Description {
+    pub fn id(&self) -> &String {
+        &self.id
+    }
+
+    pub fn accession(&self) -> &String {
+        &self.accession
+    }
+
+    pub fn title(&self) -> &String {
+        &self.title
+    }
+
+    pub fn taxid(&self) -> &u32 {
+        &self.taxid
+    }
+
+    pub fn sciname(&self) -> &String {
+        &self.sciname
+    }
+}
+
+impl Service for Blast {
+    type ResultType = BlastResult;
+    type InputType = String;
+
+    /// Run the `Blast` service with a query.
+    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         let client = Client::new();
         let response = core::post_form(
             &self.endpoint,
@@ -98,15 +241,14 @@ impl Blast {
                 ("HITLIST_SIZE", &self.hitlist_size.to_string()),
                 ("EMAIL", &self.email),
                 ("TOOL", &self.tool),
-                ("QUERY", query),
+                ("QUERY", &input),
             ],
         )
-        .await
-        .unwrap();
+        .await?;
 
-        let (rid, _rtoe) = self.fetch_ridrtoe(&response);
+        let (rid, _rtoe) = &self.fetch_ridrtoe(&response);
 
-        let search_info = core::poll(
+        let _search_info = core::poll(
             &self.endpoint,
             client.clone(),
             Some(&[
@@ -116,24 +258,19 @@ impl Blast {
             ]),
             &self,
         )
-        .await;
+        .await?;
 
-        if search_info.is_ok() {
-            let search_results = core::post_form(
-                &self.endpoint,
-                client.clone(),
-                &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
-            )
-            .await
-            .unwrap();
-            self.parse_raw_results(&search_results)
-        } else {
-            panic!("Something went wrong with the job");
-        }
+        let search_results = core::post_form(
+            &self.endpoint,
+            client.clone(),
+            &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
+        )
+        .await?;
+        self.parse_raw_results(&search_results)
     }
 }
 
-impl Pollable for &Blast {
+impl PollableService for &Blast {
     fn poll_status(&self, response: &str) -> PollStatus {
         for line in response.lines() {
             let trimmed_line = line.trim_start();
@@ -146,25 +283,27 @@ impl Pollable for &Blast {
                 }
             }
         }
-        PollStatus::Error
+        PollStatus::Error(EbioticError::ServiceError(
+            "Something went wrong with the job".to_string(),
+        ))
     }
 }
 
 impl Blast {
-    // TODO: add error handling
-    fn parse_raw_results(&self, raw_results: &str) -> Result<Search, ()> {
-        let parsed: Value = serde_json::from_str(raw_results).unwrap();
+    fn parse_raw_results(&self, raw_results: &str) -> Result<BlastResult, EbioticError> {
+        let parsed: Value = serde_json::from_str(raw_results)?;
         let flat = &parsed["BlastOutput2"][0]["report"]["results"]["search"];
 
         if flat != &Value::Null {
-            let search: Search = serde_json::from_value(flat.clone()).unwrap();
+            let search: BlastResult = serde_json::from_value(flat.clone())?;
             Ok(search)
         } else {
-            panic!("No results found");
+            Err(EbioticError::ServiceError(
+                "No results were found.".to_string(),
+            ))
         }
     }
 
-    // TODO: add error handling
     fn fetch_ridrtoe(&self, response: &str) -> (String, String) {
         let mut rid = String::new();
         let mut rtoe = String::new();
@@ -188,6 +327,37 @@ mod tests {
     fn test_parse_raw_results() {
         let test_json = include_str!("../../tests/example_blast_response.json");
         let blast = Blast::default();
-        Blast::parse_raw_results(&blast, test_json);
+        blast.parse_raw_results(test_json).unwrap();
+    }
+
+    #[test]
+    fn test_update_functions() {
+        let mut blast = Blast::new(
+            "endpoint".to_string(),
+            "program".to_string(),
+            "database".to_string(),
+            "matrix".to_string(),
+            10,
+            "email".to_string(),
+            "tool".to_string(),
+        );
+
+        // Update the values
+        blast.set_endpoint("new_endpoint".to_string());
+        blast.set_program("new_program".to_string());
+        blast.set_database("new_database".to_string());
+        blast.set_matrix("new_matrix".to_string());
+        blast.set_hitlist_size(20);
+        blast.set_email("new_email".to_string());
+        blast.set_tool("new_tool".to_string());
+
+        // Check that the values have been updated correctly
+        assert_eq!(blast.endpoint, "new_endpoint");
+        assert_eq!(blast.program, "new_program");
+        assert_eq!(blast.database, "new_database");
+        assert_eq!(blast.matrix, "new_matrix");
+        assert_eq!(blast.hitlist_size, 20);
+        assert_eq!(blast.email, "new_email");
+        assert_eq!(blast.tool, "new_tool");
     }
 }
