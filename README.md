@@ -58,10 +58,13 @@ code-bases.
 
 #### EBI:
 
-- Job Dispatcher:
-  - Clustal Omega
-- Knowledge & Data:
-  - DBfetch
+**Job Dispatcher:**
+
+- Clustal Omega
+
+**Knowledge & Data:**
+
+- DBfetch
 
 ## Contributing
 
@@ -69,7 +72,7 @@ Contributions are more than welcome. To implement a new endpoint follow the stru
 the functionality provided by the `ebiotic::core` module. If you have any questions or need help, feel free to open an
 issue or reach out to me on via email.
 
-### TODOs
+## TODOs
 
 - More tools and data sources
 - Add supplementary methods to result types (beyond just returning the data)
