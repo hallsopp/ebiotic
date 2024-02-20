@@ -15,7 +15,7 @@ pub struct Clustalo {
 }
 
 /// The `ClustaloResult` struct is used to specify the result of the `Clustalo` service.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ClustaloResult {
     aln_clustal_num: String,
     pim: HashMap<String, Vec<f64>>,

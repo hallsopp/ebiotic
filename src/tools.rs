@@ -7,10 +7,10 @@
 //!
 //! You can view a complete list of supported services [here](https://www.ebi.ac.uk/Tools/webservices/). Please feel free to open an issue or a pull request if you would like to see support for more services.
 
-mod blast;
-mod msa;
+pub mod blast;
+pub mod msa;
 
-pub use blast::{Blast, BlastResult};
+pub use blast::{Blast, BlastResult, Description, Hit, Hsp};
 pub use msa::{Clustalo, ClustaloResult};
 
 pub use crate::core::Service;
