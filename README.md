@@ -13,7 +13,8 @@ and deserialze data using common formats like JSON and specialised bioinformatic
 data
 structure from the [rust-bio](https://rust-bio.github.io/) library.
 
-The library (currently) does not safeguard against misuse of the endpoints and so it is important to read and understand
+The library does not safeguard against misuse of the endpoints (beyond hard-coded polling frequencies) and so it is
+important to read and understand
 the terms of use for each API before using this library.
 
 ## Installation
