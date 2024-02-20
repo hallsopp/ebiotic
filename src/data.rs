@@ -7,7 +7,7 @@
 //!
 //! You can view a complete list of supported databases [here](https://www.ebi.ac.uk/Tools/dbfetch/dbfetch/dbfetch.databases). Please feel free to open an issue or a pull request if you would like to see support for more databases.
 
-mod dbfetch;
+pub mod dbfetch;
 
 pub use dbfetch::{Dbfetch, DbfetchDbs, DbfetchIds, DbfetchReturnFormat, DbfetchStyle};
 

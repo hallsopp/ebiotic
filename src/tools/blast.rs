@@ -10,7 +10,7 @@ use crate::core::{self, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
 /// The `Description` struct is used to specify the description of the hit.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Description {
     id: String,
     accession: String,
@@ -20,7 +20,7 @@ pub struct Description {
 }
 
 /// The `Hsp` struct is used to specify the High-scoring Segment Pair (HSP) of the hit.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Hsp {
     num: u32,
     bit_score: f64,
@@ -32,7 +32,7 @@ pub struct Hsp {
 }
 
 /// The `Hit` struct is used to specify the hit from the BLAST search.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Hit {
     num: u32,
     description: Vec<Description>,
@@ -41,7 +41,7 @@ pub struct Hit {
 }
 
 /// The `BlastResult` struct is used to specify the result of the BLAST search.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct BlastResult {
     query_id: String,
     query_title: String,

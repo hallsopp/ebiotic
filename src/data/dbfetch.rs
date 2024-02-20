@@ -19,7 +19,7 @@ pub struct DbfetchIds {
     ids: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DbfetchResult {
     data: String,
 }
