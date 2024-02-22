@@ -7,9 +7,11 @@ use super::EBI_DBFETCH_ENDPOINT;
 use crate::core::{self, Service};
 use crate::errors::EbioticError;
 
+pub mod dbfetchdbs;
+
 /// The `Dbfetch` struct is used to specify the parameters for the `Dbfetch` service.
 pub struct Dbfetch {
-    db: DbfetchDbs,
+    db: dbfetchdbs::DbfetchDbs,
     return_format: DbfetchReturnFormat,
     style: DbfetchStyle,
 }
@@ -36,23 +38,11 @@ pub enum DbfetchStyle {
     Html,
 }
 
-pub enum DbfetchDbs {
-    EnaSequence,
-}
-
 impl Display for DbfetchReturnFormat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             DbfetchReturnFormat::Fasta => write!(f, "Fasta"),
             DbfetchReturnFormat::Json => write!(f, "Json"),
-        }
-    }
-}
-
-impl Display for DbfetchDbs {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DbfetchDbs::EnaSequence => write!(f, "ena_sequence"),
         }
     }
 }
@@ -80,7 +70,7 @@ impl Display for DbfetchStyle {
 impl Default for Dbfetch {
     fn default() -> Self {
         Dbfetch {
-            db: DbfetchDbs::EnaSequence,
+            db: dbfetchdbs::DbfetchDbs::EnaSequence,
             return_format: DbfetchReturnFormat::Fasta,
             style: DbfetchStyle::Raw,
         }
@@ -119,7 +109,11 @@ impl DbfetchIds {
 }
 
 impl Dbfetch {
-    pub fn new(db: DbfetchDbs, return_format: DbfetchReturnFormat, style: DbfetchStyle) -> Dbfetch {
+    pub fn new(
+        db: dbfetchdbs::DbfetchDbs,
+        return_format: DbfetchReturnFormat,
+        style: DbfetchStyle,
+    ) -> Dbfetch {
         Dbfetch {
             db,
             return_format,
@@ -127,7 +121,7 @@ impl Dbfetch {
         }
     }
 
-    pub fn set_db(&mut self, db: DbfetchDbs) {
+    pub fn set_db(&mut self, db: dbfetchdbs::DbfetchDbs) {
         self.db = db;
     }
 
@@ -139,7 +133,7 @@ impl Dbfetch {
         self.style = style;
     }
 
-    pub fn db(&self) -> &DbfetchDbs {
+    pub fn db(&self) -> &dbfetchdbs::DbfetchDbs {
         &self.db
     }
 
