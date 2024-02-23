@@ -1,0 +1,22 @@
+[package]
+name = "ebiotic"
+version = "0.0.21"
+edition = "2021"
+authors = ["Harry Allsopp <harryallsopp8@gmail.com>"]
+description = "A Rust crate for interacting with common bioinformatics web services."
+license = "GPL-3.0"
+repository = "https://github.com/hallsopp/ebiotic"
+documentation = "https://docs.rs/ebiotic"
+readme = "../README.md"
+keywords = ["bioinformatics", "ebi", "ncbi", "biology", "genomics"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ebiotic-macros = { path = "../ebiotic-macros" }
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1.13", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bio = "1.5"
+thiserror = "1.0"

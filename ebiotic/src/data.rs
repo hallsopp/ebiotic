@@ -9,7 +9,7 @@
 
 pub mod dbfetch;
 
-pub use dbfetch::{Dbfetch, DbfetchDbs, DbfetchIds, DbfetchReturnFormat, DbfetchStyle};
+pub use dbfetch::{dbfetchdbs::DbfetchDbs, Dbfetch, DbfetchIds, DbfetchReturnFormat, DbfetchStyle};
 
 pub use crate::core::Service;
 
