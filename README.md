@@ -10,12 +10,10 @@ enable access to the rich data and tools provided by institutes like the Europea
 Institute ([EBI](https://www.ebi.ac.uk/)) and the National Center for Biotechnology
 Information ([NCBI](https://www.ncbi.nlm.nih.gov/)). It's built to serialize
 and deserialze data using common formats like JSON and specialised bioinformatics formats like FASTA using the `Record`
-data
-structure from the [rust-bio](https://rust-bio.github.io/) library.
+data structure from the [rust-bio](https://rust-bio.github.io/) library.
 
 The library does not safeguard against misuse of the endpoints (beyond hard-coded polling frequencies) and so it is
-important to read and understand
-the terms of use for each API before using this library.
+important to read and understand the terms of use for each API before using this library.
 
 ## Installation
 
@@ -70,8 +68,9 @@ code-bases.
 ## Contributing
 
 Contributions are more than welcome. To implement a new endpoint follow the structure of the current modules and utilise
-the functionality provided by the `ebiotic::core` module. If you have any questions or need help, feel free to open an
-issue or reach out to me on via email.
+the functionality provided by the `ebiotic::core` module. Alternatively, pick something from the TODO list and try to
+implement.
+If you have any questions or need help, feel free to open an issue or reach out to me on via email.
 
 ## TODOs
 
@@ -84,3 +83,4 @@ issue or reach out to me on via email.
 - Add logging system beyond print statements (e.g. tracing or log crate)
 - Add more configuration options
 - Safety checks for API usage (?)
+- Support for custom asynchronous runtimes

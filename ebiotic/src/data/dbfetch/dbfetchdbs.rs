@@ -1,5 +1,9 @@
 use std::fmt::{Display, Formatter};
 
+use super::DbfetchReturnFormat;
+
+// WILL HOPEFULLY REPLACE ALL OF THIS ONCE THE MACROS ARE WORKING
+
 pub enum DbfetchDbs {
     AlphaFoldDb,
     Cdp,
@@ -13,12 +17,12 @@ pub enum DbfetchDbs {
     EnaSequence,
     EnaSequenceConstructed,
     EnaSequenceConstructedExpanded,
-    EnaSVA,
+    EnaSva,
     EnsemblGene,
     EnsemblGenomesGene,
     EnsemblGenomesTranscript,
     EnsemblTranscript,
-    EPOProteins,
+    EpoProteins,
     Hgnc,
     ImgtHlaNucleotideCds,
     ImgtHlaNucleotideGenomic,
@@ -61,6 +65,100 @@ pub enum DbfetchDbs {
     UsptoProteins,
 }
 
+pub trait DbfetchReturnTypes {
+    fn available_return_formats(&self) -> Vec<DbfetchReturnFormat>;
+}
+
+impl DbfetchReturnTypes for DbfetchDbs {
+    fn available_return_formats(&self) -> Vec<DbfetchReturnFormat> {
+        match self {
+            DbfetchDbs::AlphaFoldDb => vec![
+                DbfetchReturnFormat::Json,
+                DbfetchReturnFormat::Fasta,
+                DbfetchReturnFormat::Pdb,
+                DbfetchReturnFormat::Mmcif,
+            ],
+            DbfetchDbs::Cdp => vec![DbfetchReturnFormat::Xml, DbfetchReturnFormat::Fasta],
+            DbfetchDbs::ChemblTargets => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::Edam => vec![DbfetchReturnFormat::Obo],
+            DbfetchDbs::Emdb => vec![DbfetchReturnFormat::Xml],
+            DbfetchDbs::EnaCoding => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnaGeospatial => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnaNonCoding => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnaRrna => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnaSequence => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnaSequenceConstructed => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnaSequenceConstructedExpanded => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnaSva => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnsemblGene => vec![
+                DbfetchReturnFormat::Fasta,
+                DbfetchReturnFormat::Csv,
+                DbfetchReturnFormat::Gff3,
+                DbfetchReturnFormat::Gff2,
+            ],
+            DbfetchDbs::EnsemblGenomesGene => vec![
+                DbfetchReturnFormat::Fasta,
+                DbfetchReturnFormat::Csv,
+                DbfetchReturnFormat::Gff3,
+                DbfetchReturnFormat::Gff2,
+            ],
+            DbfetchDbs::EnsemblGenomesTranscript => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EnsemblTranscript => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::EpoProteins => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::Hgnc => vec![DbfetchReturnFormat::Tsv],
+            DbfetchDbs::ImgtHlaNucleotideCds => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::ImgtHlaNucleotideGenomic => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::ImgtHlaProtein => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::ImgtLigmDb => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::InterPro => vec![DbfetchReturnFormat::Tsv],
+            DbfetchDbs::IpdKirNucleotideCds => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::IpdKirNucleotideGenomic => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::IpdKirProtein => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::IpdMhcNucleotideCds => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::IpdMhcNucleotideGenomic => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::IpdMhcProtein => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::IpdNhkirNucleotideCds => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::IpdNhkirNucleotideGenomic => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::IpdNhkirProtein => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::Iprmc => vec![DbfetchReturnFormat::Gff2],
+            DbfetchDbs::IprmcUniParc => vec![DbfetchReturnFormat::Gff2],
+            DbfetchDbs::JpoProteins => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::KipoProteins => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::Medline => vec![DbfetchReturnFormat::Xml],
+            DbfetchDbs::MeropsMp => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::MeropsMpep => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::MeropsMpro => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::PatentDnaNrl1 => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::PatentDnaNrl2 => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::PatentProteinNrl1 => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::PatentProteinNrl2 => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::PatentEquivalents => vec![DbfetchReturnFormat::PatentEquivalents],
+            DbfetchDbs::Pdb => vec![
+                DbfetchReturnFormat::Fasta,
+                DbfetchReturnFormat::Pdb,
+                DbfetchReturnFormat::Mmcif,
+            ],
+            DbfetchDbs::PdbeKb => vec![
+                DbfetchReturnFormat::Fasta,
+                DbfetchReturnFormat::Pdb,
+                DbfetchReturnFormat::Mmcif,
+            ],
+            DbfetchDbs::RefSeqNucleotide => {
+                vec![DbfetchReturnFormat::Json, DbfetchReturnFormat::Fasta]
+            }
+            DbfetchDbs::RefSeqProtein => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::Taxonomy => vec![DbfetchReturnFormat::Xml],
+            DbfetchDbs::UniParc => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::UniProtKB => vec![DbfetchReturnFormat::Gff3, DbfetchReturnFormat::Fasta],
+            DbfetchDbs::UniRef100 => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::UniRef50 => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::UniRef90 => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::UniSave => vec![DbfetchReturnFormat::Fasta],
+            DbfetchDbs::UsptoProteins => vec![DbfetchReturnFormat::Fasta],
+        }
+    }
+}
+
 impl Display for DbfetchDbs {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -76,12 +174,12 @@ impl Display for DbfetchDbs {
             DbfetchDbs::EnaSequence => write!(f, "ena_sequence"),
             DbfetchDbs::EnaSequenceConstructed => write!(f, "ena_sequence_con"),
             DbfetchDbs::EnaSequenceConstructedExpanded => write!(f, "ena_sequence_conexp"),
-            DbfetchDbs::EnaSVA => write!(f, "ena_sva"),
+            DbfetchDbs::EnaSva => write!(f, "ena_sva"),
             DbfetchDbs::EnsemblGene => write!(f, "ensemblgene"),
             DbfetchDbs::EnsemblGenomesGene => write!(f, "ensemblgenomesgene"),
             DbfetchDbs::EnsemblGenomesTranscript => write!(f, "ensemblgenomestranscript"),
             DbfetchDbs::EnsemblTranscript => write!(f, "ensembltranscript"),
-            DbfetchDbs::EPOProteins => write!(f, "epo_prt"),
+            DbfetchDbs::EpoProteins => write!(f, "epo_prt"),
             DbfetchDbs::Hgnc => write!(f, "hgnc"),
             DbfetchDbs::ImgtHlaNucleotideCds => write!(f, "imgthlacds"),
             DbfetchDbs::ImgtHlaNucleotideGenomic => write!(f, "imgthlagen"),
