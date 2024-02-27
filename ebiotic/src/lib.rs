@@ -23,7 +23,8 @@
 //! ## Examples
 //!
 //! The idea of this crate is that all the services, regardless of the type, use a similar interface. This is achieved (currently) by using the `core::Service` trait and accompanying utilities.
-//! Therefore, this trait must be in scope to use any of the services. This can be done by importing it directly or by importing an entire module that contains it.
+//! Therefore, this trait must be in scope to use any of the services. This can be done by importing it directly or by importing an entire module that contains it. Each utility currently initialises
+//! its own `reqwest::Client` which is used to make the requests. This was done for fine-grained control, but I hope to provide a way to use a custom client in the future.
 //!
 //! Here's an example of how to use the `Blast` service:
 //!

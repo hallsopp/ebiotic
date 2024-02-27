@@ -13,4 +13,7 @@ pub enum EbioticError {
     ParseFloatError(#[from] std::num::ParseFloatError),
     #[error("Unable to handle IO: {0}")]
     IoError(#[from] std::io::Error),
+
+    #[error("Return format {0} not available for database {1}")]
+    ReturnFormatNotAvailable(String, String),
 }

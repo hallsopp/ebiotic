@@ -7,9 +7,13 @@ use super::EBI_DBFETCH_ENDPOINT;
 use crate::core::{self, Service};
 use crate::errors::EbioticError;
 
+pub mod dbfetchdbs;
+
+use dbfetchdbs::DbfetchReturnTypes;
+
 /// The `Dbfetch` struct is used to specify the parameters for the `Dbfetch` service.
 pub struct Dbfetch {
-    db: DbfetchDbs,
+    db: dbfetchdbs::DbfetchDbs,
     return_format: DbfetchReturnFormat,
     style: DbfetchStyle,
 }
@@ -25,9 +29,19 @@ pub struct DbfetchResult {
 }
 
 /// The `DbfetchReturnFormat` enum is used to specify the return format of the `Dbfetch` service. This is dependent on the type of data available from the database.
+#[derive(PartialEq, Debug)]
 pub enum DbfetchReturnFormat {
     Fasta,
     Json,
+    Pdb,
+    Mmcif,
+    Xml,
+    Obo,
+    Csv,
+    Tsv,
+    Gff3,
+    Gff2,
+    PatentEquivalents,
 }
 
 /// The `DbfetchStyle` enum is used to specify the style of the return data from the `Dbfetch` service.
@@ -36,23 +50,20 @@ pub enum DbfetchStyle {
     Html,
 }
 
-pub enum DbfetchDbs {
-    EnaSequence,
-}
-
 impl Display for DbfetchReturnFormat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            DbfetchReturnFormat::Fasta => write!(f, "Fasta"),
-            DbfetchReturnFormat::Json => write!(f, "Json"),
-        }
-    }
-}
-
-impl Display for DbfetchDbs {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DbfetchDbs::EnaSequence => write!(f, "ena_sequence"),
+            DbfetchReturnFormat::Fasta => write!(f, "fasta"),
+            DbfetchReturnFormat::Json => write!(f, "json"),
+            DbfetchReturnFormat::Pdb => write!(f, "pdb"),
+            DbfetchReturnFormat::Mmcif => write!(f, "mmcif"),
+            DbfetchReturnFormat::Xml => write!(f, "xml"),
+            DbfetchReturnFormat::Obo => write!(f, "obo"),
+            DbfetchReturnFormat::Csv => write!(f, "csv"),
+            DbfetchReturnFormat::Gff3 => write!(f, "gff3"),
+            DbfetchReturnFormat::Tsv => write!(f, "tab"),
+            DbfetchReturnFormat::Gff2 => write!(f, "gff2"),
+            DbfetchReturnFormat::PatentEquivalents => write!(f, "patent_equivalents"),
         }
     }
 }
@@ -80,7 +91,7 @@ impl Display for DbfetchStyle {
 impl Default for Dbfetch {
     fn default() -> Self {
         Dbfetch {
-            db: DbfetchDbs::EnaSequence,
+            db: dbfetchdbs::DbfetchDbs::EnaSequence,
             return_format: DbfetchReturnFormat::Fasta,
             style: DbfetchStyle::Raw,
         }
@@ -119,7 +130,11 @@ impl DbfetchIds {
 }
 
 impl Dbfetch {
-    pub fn new(db: DbfetchDbs, return_format: DbfetchReturnFormat, style: DbfetchStyle) -> Dbfetch {
+    pub fn new(
+        db: dbfetchdbs::DbfetchDbs,
+        return_format: DbfetchReturnFormat,
+        style: DbfetchStyle,
+    ) -> Dbfetch {
         Dbfetch {
             db,
             return_format,
@@ -127,7 +142,7 @@ impl Dbfetch {
         }
     }
 
-    pub fn set_db(&mut self, db: DbfetchDbs) {
+    pub fn set_db(&mut self, db: dbfetchdbs::DbfetchDbs) {
         self.db = db;
     }
 
@@ -139,7 +154,7 @@ impl Dbfetch {
         self.style = style;
     }
 
-    pub fn db(&self) -> &DbfetchDbs {
+    pub fn db(&self) -> &dbfetchdbs::DbfetchDbs {
         &self.db
     }
 
@@ -158,7 +173,21 @@ impl Service for Dbfetch {
 
     /// Run the `Dbfetch` service with a list of IDs.
     async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
+        if self
+            .db
+            .available_return_formats()
+            .iter()
+            .find(|&x| x == &self.return_format)
+            .is_none()
+        {
+            return Err(EbioticError::ReturnFormatNotAvailable(
+                self.return_format.to_string(),
+                self.db.to_string(),
+            ));
+        }
+
         let client = Client::new();
+
         let res = client
             .get(&format!(
                 "{}?db={}&format={}&style={}&id={}",
