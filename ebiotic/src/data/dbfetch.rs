@@ -4,11 +4,10 @@ use reqwest::Client;
 use std::fmt::{Display, Formatter};
 
 use super::EBI_DBFETCH_ENDPOINT;
-use crate::core::{self, Service};
+use crate::core::{self, EbioticClient, EbioticHttpClient, Service};
 use crate::errors::EbioticError;
 
 pub mod dbfetchdbs;
-
 use dbfetchdbs::DbfetchReturnTypes;
 
 /// The `Dbfetch` struct is used to specify the parameters for the `Dbfetch` service.
@@ -172,7 +171,11 @@ impl Service for Dbfetch {
     type InputType = DbfetchIds;
 
     /// Run the `Dbfetch` service with a list of IDs.
-    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
+    async fn run(
+        &self,
+        client: EbioticClient,
+        input: Self::InputType,
+    ) -> Result<Self::ResultType, EbioticError> {
         if self
             .db
             .available_return_formats()
@@ -186,16 +189,13 @@ impl Service for Dbfetch {
             ));
         }
 
-        let client = Client::new();
-
         let res = client
             .get(&format!(
                 "{}?db={}&format={}&style={}&id={}",
                 EBI_DBFETCH_ENDPOINT, self.db, self.return_format, self.style, input
             ))
-            .send()
             .await?;
 
-        Ok(DbfetchResult::new(res.text().await?))
+        Ok(DbfetchResult::new(res))
     }
 }

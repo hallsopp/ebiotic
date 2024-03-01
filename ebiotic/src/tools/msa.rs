@@ -1,11 +1,10 @@
 use bio::io::fasta::Record;
-use reqwest::Client;
 
 use std::collections::HashMap;
 use std::fmt::Write;
 
 use super::EBI_TOOLS_ENDPOINT;
-use crate::core::{self, PollStatus, PollableService, Service};
+use crate::core::{EbioticClient, EbioticHttpClient, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
 /// The `Clustalo` struct is used to specify the parameters for the `Clustalo` service.
@@ -72,28 +71,28 @@ impl Service for Clustalo {
     type InputType = Vec<Record>;
 
     /// Run the `Clustalo` service with the given input.
-    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
-        let client = Client::new();
-
+    async fn run(
+        &self,
+        client: EbioticClient,
+        input: Self::InputType,
+    ) -> Result<Self::ResultType, EbioticError> {
         let run_endpoint = format!("{}{}", &self.endpoint, "run/");
         let sequences = self.pretty_format_records(input);
 
-        println!("{}", &sequences);
-
-        let response = core::post_form(
-            &run_endpoint,
-            client.clone(),
-            &[
-                ("email", &self.email.as_str()),
-                ("sequence", &sequences.as_str()),
-            ],
-        )
-        .await?;
+        let response = client
+            .post_form(
+                &run_endpoint,
+                &[
+                    ("email", &self.email.as_str()),
+                    ("sequence", &sequences.as_str()),
+                ],
+            )
+            .await?;
 
         let poll_endpoint = format!("{}{}{}", &self.endpoint, &"status/", &response);
 
         // Polling to wait for the result, however result is not directly returned
-        let _ = core::poll(&poll_endpoint, client.clone(), None, &self).await?;
+        let _ = client.poll(&poll_endpoint, None, &self).await?;
 
         // Assuming the polling does not error out, the earlier response number
         // can be used to fetch the results
@@ -102,9 +101,6 @@ impl Service for Clustalo {
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/aln-clustal_num"
             ))
-            .send()
-            .await?
-            .text()
             .await?;
 
         let pim = client
@@ -112,9 +108,6 @@ impl Service for Clustalo {
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/pim"
             ))
-            .send()
-            .await?
-            .text()
             .await?;
 
         let phylotree = client
@@ -122,9 +115,6 @@ impl Service for Clustalo {
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/phylotree"
             ))
-            .send()
-            .await?
-            .text()
             .await?;
 
         let results = ClustaloResult {
