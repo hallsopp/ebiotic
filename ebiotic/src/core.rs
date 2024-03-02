@@ -5,31 +5,16 @@ use std::io::Cursor;
 
 use crate::errors::EbioticError;
 
+mod network;
 mod reqwest;
 
+pub use self::network::EbioticHttpClient;
 pub use self::reqwest::EbioticReqwestClient as EbioticClient;
 
 pub(crate) enum PollStatus {
     Finished,
     Running(u64),
     Error(EbioticError),
-}
-
-pub(crate) trait EbioticHttpClient: Default + Send + Clone {
-    async fn post_form(
-        &self,
-        endpoint: &str,
-        body: &[(&str, &str)],
-    ) -> Result<String, EbioticError>;
-    async fn get(&self, endpoint: &str) -> Result<String, EbioticError>;
-    async fn poll<F>(
-        &self,
-        endpoint: &str,
-        post_body: Option<&[(&str, &str)]>,
-        method_caller: &F,
-    ) -> Result<String, EbioticError>
-    where
-        F: PollableService;
 }
 
 pub(crate) trait PollableService {

@@ -11,6 +11,7 @@ pub mod dbfetch;
 
 pub use dbfetch::{dbfetchdbs::DbfetchDbs, Dbfetch, DbfetchIds, DbfetchReturnFormat, DbfetchStyle};
 
+pub use crate::core::EbioticClient;
 pub use crate::core::Service;
 
 pub const EBI_DBFETCH_ENDPOINT: &str = "https://www.ebi.ac.uk/Tools/dbfetch/";

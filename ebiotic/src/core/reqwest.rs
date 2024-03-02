@@ -1,8 +1,10 @@
 use reqwest::Client;
 use tokio::time::{self, Duration};
 
-use crate::core::{EbioticHttpClient, PollStatus, PollableService};
+use crate::core::{PollStatus, PollableService};
 use crate::errors::EbioticError;
+
+use super::network::EbioticHttpClient;
 
 #[derive(Clone)]
 pub struct EbioticReqwestClient {
