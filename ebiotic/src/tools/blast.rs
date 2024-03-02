@@ -1,12 +1,11 @@
 use bio::io::fasta::Record;
-use reqwest::Client;
 
 use serde::de::Deserializer;
 use serde::Deserialize;
 use serde_json::Value;
 
 use super::BLAST_ENDPOINT;
-use crate::core::{self, EbioticClient, EbioticHttpClient, PollStatus, PollableService, Service};
+use crate::core::{EbioticClient, EbioticHttpClient, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
 /// The `Description` struct is used to specify the description of the hit.

@@ -1,6 +1,5 @@
 use ebiotic::data::*;
 use ebiotic::tools::*;
-use tokio;
 
 #[tokio::test]
 async fn blast_run_with_valid_query_returns_expected_result() {
@@ -29,28 +28,28 @@ async fn clustalo_run_with_valid_sequences_returns_expected_result() {
     clustalo.set_email("harryallsopp8@gmail.com".to_string());
 
     let seq1 = Record::with_attrs(
-        &"seq1".to_string(),
+        "seq1",
         None,
         "AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA"
             .to_string()
             .as_ref(),
     );
     let seq2 = Record::with_attrs(
-        &"seq2".to_string(),
+        "seq2",
         None,
         "TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA"
             .to_string()
             .as_ref(),
     );
     let seq3 = Record::with_attrs(
-        &"seq3".to_string(),
+        "seq3",
         None,
         "GCTAGTCCGATGCGTACGATCGTACGATGCTAGCTAGCTAGCTAGCTAGCTA"
             .to_string()
             .as_ref(),
     );
     let seq4 = Record::with_attrs(
-        &"seq4".to_string(),
+        "seq4",
         None,
         "CGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA"
             .to_string()
@@ -78,7 +77,7 @@ async fn clustalo_run_with_empty_sequences_returns_error() {
 #[tokio::test]
 async fn test_dbfetch() {
     let client = EbioticClient::default();
-    let mut dbfetch = Dbfetch::default();
+    let dbfetch = Dbfetch::default();
     let ids = DbfetchIds::new(vec![
         "M10051".to_string(),
         "K00650".to_string(),
@@ -94,7 +93,7 @@ async fn test_dbfetch() {
 #[tokio::test]
 async fn test_dbfetch_default_fasta() {
     let client = EbioticClient::default();
-    let mut dbfetch = Dbfetch::default();
+    let dbfetch = Dbfetch::default();
     let ids = DbfetchIds::new(vec![
         "M10051".to_string(),
         "K00650".to_string(),

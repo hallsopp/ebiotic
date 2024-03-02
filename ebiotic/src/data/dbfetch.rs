@@ -1,5 +1,4 @@
 use bio::io::fasta::Record;
-use reqwest::Client;
 
 use std::fmt::{Display, Formatter};
 
@@ -176,12 +175,11 @@ impl Service for Dbfetch {
         client: EbioticClient,
         input: Self::InputType,
     ) -> Result<Self::ResultType, EbioticError> {
-        if self
+        if !self
             .db
             .available_return_formats()
             .iter()
-            .find(|&x| x == &self.return_format)
-            .is_none()
+            .any(|x| x == &self.return_format)
         {
             return Err(EbioticError::ReturnFormatNotAvailable(
                 self.return_format.to_string(),

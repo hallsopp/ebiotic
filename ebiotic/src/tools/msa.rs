@@ -213,28 +213,28 @@ mod tests {
     #[test]
     fn pretty_format_records_formats_correctly() {
         let seq1 = Record::with_attrs(
-            &"seq1".to_string(),
+            "seq1",
             None,
             "AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA"
                 .to_string()
                 .as_ref(),
         );
         let seq2 = Record::with_attrs(
-            &"seq2".to_string(),
+            "seq2",
             None,
             "TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA"
                 .to_string()
                 .as_ref(),
         );
         let seq3 = Record::with_attrs(
-            &"seq3".to_string(),
+            "seq3",
             None,
             "GCTAGTCCGATGCGTACGATCGTACGATGCTAGCTAGCTAGCTAGCTAGCTA"
                 .to_string()
                 .as_ref(),
         );
         let seq4 = Record::with_attrs(
-            &"seq4".to_string(),
+            "seq4",
             None,
             "CGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA"
                 .to_string()
@@ -251,7 +251,7 @@ mod tests {
     fn parse_fasta_result_parses_correctly() {
         let fasta_string = ">seq1\nAGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA\n>seq2\nTACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA";
 
-        let fasta = parse_fa_from_bufread(&fasta_string).unwrap();
+        let fasta = parse_fa_from_bufread(fasta_string).unwrap();
 
         assert_eq!(fasta.len(), 2);
         assert_eq!(fasta[0].id(), "seq1");
@@ -276,7 +276,7 @@ mod tests {
         4: Sequence4    40.91   31.71   77.78  100.00   96.00
         5: Sequence5    40.00   33.33   83.78   96.00  100.00";
 
-        let pim = clustalo.parse_pim_result(&pim_string).unwrap();
+        let pim = clustalo.parse_pim_result(pim_string).unwrap();
 
         assert_eq!(pim.len(), 5);
         assert_eq!(pim["Sequence1"], vec![100.00, 36.73, 40.91, 40.91, 40.00]);
@@ -291,7 +291,7 @@ mod tests {
         let clustalo = Clustalo::default();
         let pim_string = "invalid input";
 
-        let pim = clustalo.parse_pim_result(&pim_string);
+        let pim = clustalo.parse_pim_result(pim_string);
 
         assert!(pim.is_err());
     }
@@ -300,7 +300,7 @@ mod tests {
     fn parse_fasta_result_handles_invalid_input() {
         let fasta_string = "invalid input";
 
-        let fasta = parse_fa_from_bufread(&fasta_string);
+        let fasta = parse_fa_from_bufread(fasta_string);
 
         assert!(fasta.is_err());
     }
