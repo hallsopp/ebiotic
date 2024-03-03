@@ -79,6 +79,8 @@ impl Service for Clustalo {
         let run_endpoint = format!("{}{}", &self.endpoint, "run/");
         let sequences = self.pretty_format_records(input);
 
+        log::info!("Running Clustal Omega alignment");
+
         let response = client
             .post_form(
                 &run_endpoint,
@@ -91,8 +93,12 @@ impl Service for Clustalo {
 
         let poll_endpoint = format!("{}{}{}", &self.endpoint, &"status/", &response);
 
+        log::info!("Job ID: {}", &response);
+
         // Polling to wait for the result, however result is not directly returned
         let _ = client.poll(&poll_endpoint, None, &self).await?;
+
+        log::info!("Fetching results for Job: {}", &response);
 
         // Assuming the polling does not error out, the earlier response number
         // can be used to fetch the results

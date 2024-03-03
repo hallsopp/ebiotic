@@ -232,6 +232,8 @@ impl Service for Blast {
         client: EbioticClient,
         input: Self::InputType,
     ) -> Result<Self::ResultType, EbioticError> {
+        log::info!("Running BLAST search");
+
         let response = client
             .post_form(
                 &self.endpoint,
@@ -248,7 +250,9 @@ impl Service for Blast {
             )
             .await?;
 
-        let (rid, _rtoe) = &self.fetch_ridrtoe(&response);
+        let (rid, rtoe) = &self.fetch_ridrtoe(&response);
+
+        log::info!("RID: {}, RTOE: {}", rid, rtoe);
 
         let _search_info = client
             .poll(
@@ -261,6 +265,8 @@ impl Service for Blast {
                 &self,
             )
             .await?;
+
+        log::info!("Fetching results for RID: {}", rid);
 
         let search_results = client
             .post_form(

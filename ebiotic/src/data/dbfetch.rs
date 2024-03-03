@@ -187,6 +187,8 @@ impl Service for Dbfetch {
             ));
         }
 
+        log::info!("Submitting DBfetch request");
+
         let res = client
             .get(&format!(
                 "{}?db={}&format={}&style={}&id={}",
