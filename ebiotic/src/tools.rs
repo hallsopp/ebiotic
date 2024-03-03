@@ -13,6 +13,7 @@ pub mod msa;
 pub use blast::{Blast, BlastResult, Description, Hit, Hsp};
 pub use msa::{Clustalo, ClustaloResult};
 
+pub use crate::core::EbioticClient;
 pub use crate::core::Service;
 pub use bio::io::fasta::{Reader, Record};
 

@@ -1,11 +1,10 @@
 use bio::io::fasta::Record;
-use reqwest::Client;
 
 use std::collections::HashMap;
 use std::fmt::Write;
 
 use super::EBI_TOOLS_ENDPOINT;
-use crate::core::{self, PollStatus, PollableService, Service};
+use crate::core::{EbioticClient, EbioticHttpClient, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
 /// The `Clustalo` struct is used to specify the parameters for the `Clustalo` service.
@@ -72,28 +71,28 @@ impl Service for Clustalo {
     type InputType = Vec<Record>;
 
     /// Run the `Clustalo` service with the given input.
-    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
-        let client = Client::new();
-
+    async fn run(
+        &self,
+        client: EbioticClient,
+        input: Self::InputType,
+    ) -> Result<Self::ResultType, EbioticError> {
         let run_endpoint = format!("{}{}", &self.endpoint, "run/");
         let sequences = self.pretty_format_records(input);
 
-        println!("{}", &sequences);
-
-        let response = core::post_form(
-            &run_endpoint,
-            client.clone(),
-            &[
-                ("email", &self.email.as_str()),
-                ("sequence", &sequences.as_str()),
-            ],
-        )
-        .await?;
+        let response = client
+            .post_form(
+                &run_endpoint,
+                &[
+                    ("email", &self.email.as_str()),
+                    ("sequence", &sequences.as_str()),
+                ],
+            )
+            .await?;
 
         let poll_endpoint = format!("{}{}{}", &self.endpoint, &"status/", &response);
 
         // Polling to wait for the result, however result is not directly returned
-        let _ = core::poll(&poll_endpoint, client.clone(), None, &self).await?;
+        let _ = client.poll(&poll_endpoint, None, &self).await?;
 
         // Assuming the polling does not error out, the earlier response number
         // can be used to fetch the results
@@ -102,9 +101,6 @@ impl Service for Clustalo {
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/aln-clustal_num"
             ))
-            .send()
-            .await?
-            .text()
             .await?;
 
         let pim = client
@@ -112,9 +108,6 @@ impl Service for Clustalo {
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/pim"
             ))
-            .send()
-            .await?
-            .text()
             .await?;
 
         let phylotree = client
@@ -122,9 +115,6 @@ impl Service for Clustalo {
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/phylotree"
             ))
-            .send()
-            .await?
-            .text()
             .await?;
 
         let results = ClustaloResult {
@@ -223,28 +213,28 @@ mod tests {
     #[test]
     fn pretty_format_records_formats_correctly() {
         let seq1 = Record::with_attrs(
-            &"seq1".to_string(),
+            "seq1",
             None,
             "AGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA"
                 .to_string()
                 .as_ref(),
         );
         let seq2 = Record::with_attrs(
-            &"seq2".to_string(),
+            "seq2",
             None,
             "TACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA"
                 .to_string()
                 .as_ref(),
         );
         let seq3 = Record::with_attrs(
-            &"seq3".to_string(),
+            "seq3",
             None,
             "GCTAGTCCGATGCGTACGATCGTACGATGCTAGCTAGCTAGCTAGCTAGCTA"
                 .to_string()
                 .as_ref(),
         );
         let seq4 = Record::with_attrs(
-            &"seq4".to_string(),
+            "seq4",
             None,
             "CGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA"
                 .to_string()
@@ -261,7 +251,7 @@ mod tests {
     fn parse_fasta_result_parses_correctly() {
         let fasta_string = ">seq1\nAGCTTGAACGTTAGCGGAACGTAAGCGAGATCCGTAGGCTAACTCGTACGTA\n>seq2\nTACGATGCAAATCGTGCACGGTCCAGTACGATCCGATGCTAAGTCCGATCGA";
 
-        let fasta = parse_fa_from_bufread(&fasta_string).unwrap();
+        let fasta = parse_fa_from_bufread(fasta_string).unwrap();
 
         assert_eq!(fasta.len(), 2);
         assert_eq!(fasta[0].id(), "seq1");
@@ -286,7 +276,7 @@ mod tests {
         4: Sequence4    40.91   31.71   77.78  100.00   96.00
         5: Sequence5    40.00   33.33   83.78   96.00  100.00";
 
-        let pim = clustalo.parse_pim_result(&pim_string).unwrap();
+        let pim = clustalo.parse_pim_result(pim_string).unwrap();
 
         assert_eq!(pim.len(), 5);
         assert_eq!(pim["Sequence1"], vec![100.00, 36.73, 40.91, 40.91, 40.00]);
@@ -301,7 +291,7 @@ mod tests {
         let clustalo = Clustalo::default();
         let pim_string = "invalid input";
 
-        let pim = clustalo.parse_pim_result(&pim_string);
+        let pim = clustalo.parse_pim_result(pim_string);
 
         assert!(pim.is_err());
     }
@@ -310,7 +300,7 @@ mod tests {
     fn parse_fasta_result_handles_invalid_input() {
         let fasta_string = "invalid input";
 
-        let fasta = parse_fa_from_bufread(&fasta_string);
+        let fasta = parse_fa_from_bufread(fasta_string);
 
         assert!(fasta.is_err());
     }

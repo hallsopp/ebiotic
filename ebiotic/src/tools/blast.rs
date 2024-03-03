@@ -1,12 +1,11 @@
 use bio::io::fasta::Record;
-use reqwest::Client;
 
 use serde::de::Deserializer;
 use serde::Deserialize;
 use serde_json::Value;
 
 use super::BLAST_ENDPOINT;
-use crate::core::{self, PollStatus, PollableService, Service};
+use crate::core::{EbioticClient, EbioticHttpClient, PollStatus, PollableService, Service};
 use crate::errors::EbioticError;
 
 /// The `Description` struct is used to specify the description of the hit.
@@ -228,44 +227,47 @@ impl Service for Blast {
     type InputType = String;
 
     /// Run the `Blast` service with a query.
-    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
-        let client = Client::new();
-        let response = core::post_form(
-            &self.endpoint,
-            client.clone(),
-            &[
-                ("CMD", "Put"),
-                ("PROGRAM", &self.program),
-                ("DATABASE", &self.database),
-                ("MATRIX", &self.matrix),
-                ("HITLIST_SIZE", &self.hitlist_size.to_string()),
-                ("EMAIL", &self.email),
-                ("TOOL", &self.tool),
-                ("QUERY", &input),
-            ],
-        )
-        .await?;
+    async fn run(
+        &self,
+        client: EbioticClient,
+        input: Self::InputType,
+    ) -> Result<Self::ResultType, EbioticError> {
+        let response = client
+            .post_form(
+                &self.endpoint,
+                &[
+                    ("CMD", "Put"),
+                    ("PROGRAM", &self.program),
+                    ("DATABASE", &self.database),
+                    ("MATRIX", &self.matrix),
+                    ("HITLIST_SIZE", &self.hitlist_size.to_string()),
+                    ("EMAIL", &self.email),
+                    ("TOOL", &self.tool),
+                    ("QUERY", &input),
+                ],
+            )
+            .await?;
 
         let (rid, _rtoe) = &self.fetch_ridrtoe(&response);
 
-        let _search_info = core::poll(
-            &self.endpoint,
-            client.clone(),
-            Some(&[
-                ("CMD", "Get"),
-                ("FORMAT_OBJECT", "SearchInfo"),
-                ("RID", &rid),
-            ]),
-            &self,
-        )
-        .await?;
+        let _search_info = client
+            .poll(
+                &self.endpoint,
+                Some(&[
+                    ("CMD", "Get"),
+                    ("FORMAT_OBJECT", "SearchInfo"),
+                    ("RID", &rid),
+                ]),
+                &self,
+            )
+            .await?;
 
-        let search_results = core::post_form(
-            &self.endpoint,
-            client.clone(),
-            &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
-        )
-        .await?;
+        let search_results = client
+            .post_form(
+                &self.endpoint,
+                &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
+            )
+            .await?;
         self.parse_raw_results(&search_results)
     }
 }
