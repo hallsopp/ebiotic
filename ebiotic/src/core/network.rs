@@ -1,6 +1,7 @@
 use crate::core::PollableService;
 use crate::errors::EbioticError;
 
+/// The `EbioticHttpClient` trait is used to specify the HTTP functionality for a given client.
 pub trait EbioticHttpClient: Default + Send + Clone {
     async fn post_form(
         &self,

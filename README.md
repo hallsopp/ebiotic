@@ -23,7 +23,7 @@ the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-ebiotic = "0.0.22"
+ebiotic = "0.0.23"
 ```
 
 ## Usage
@@ -33,11 +33,14 @@ example demonstrates how to use the library to search the European Nucleotide
 Archive ([ENA](https://www.ebi.ac.uk/ena/browser/home)) for a selection of entries.
 
 ```rust
+use ebiotic::data::*;
+
 #[tokio::main]
 async fn main_fasta() {
-  let dbfetch = Dbfetch::default();
-  let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
-  let result = dbfetch.run(ids).await.unwrap().into_records();
+    let client = EbioticClient::Default();
+    let dbfetch = Dbfetch::default();
+    let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
+    let result = dbfetch.run(client, ids).await.unwrap().into_records();
 }
 ```
 
@@ -46,8 +49,34 @@ new instance of the `DbfetchIds` request. The `run` method is then called on the
 the `DbfetchIds` instance as an argument. The `run` method returns a `Result` which is then unwrapped and converted into
 a `Vec<Record>` using the `into_records` method.
 
+In order to perform HTTP requests, a system client is required. The `EbioticClient` struct is used to create a new
+client for this purpose. By default, the `EbioticClient` uses an asynchronous `reqwest` client under the hood. This
+means it can be customised for platform specific requirements, such as using a proxy or customising the user agent. More
+information on the `reqwest` client can be found in the [reqwest documentation](https://docs.rs/crate/reqwest/latest).
+
+```rust
+use ebiotic::tools::*;
+use std::time::Duration;
+use reqwest;
+
+#[tokio::main]
+async fn main_blast() {
+    let client = EbioticClient::new(
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(10))
+            .proxy(reqwest::Proxy::all("http://my-proxy:8080").unwrap())
+            .build()
+            .unwrap(),
+    );
+
+    let blast = Blast::default();
+    let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
+    let result = blast.run(client, query.to_string()).await;
+}
+```
+
 More examples can be found in the [documentation](https://docs.rs/ebiotic). Including how to run in synchronous
-code-bases.
+code-bases using thread blocking.
 
 ## Current APIs
 
@@ -83,4 +112,3 @@ If you have any questions or need help, feel free to open an issue or reach out 
 - Add logging system beyond print statements (e.g. tracing or log crate)
 - Add more configuration options
 - Safety checks for API usage (?)
-- Support for custom asynchronous runtimes
