@@ -2,17 +2,18 @@ use bio::io::fasta::Record;
 
 use std::fmt::{Display, Formatter};
 
-use super::EBI_DBFETCH_ENDPOINT;
+use super::{AvailableReturnFormats, DataReturnFormats, EBI_DBFETCH_ENDPOINT};
 use crate::core::{self, EbioticClient, EbioticHttpClient, Service};
 use crate::errors::EbioticError;
 
 pub mod dbfetchdbs;
-use dbfetchdbs::DbfetchReturnTypes;
 
 /// The `Dbfetch` struct is used to specify the parameters for the `Dbfetch` service.
+#[derive(Debug, Clone)]
 pub struct Dbfetch {
+    pub(crate) client: EbioticClient,
     db: dbfetchdbs::DbfetchDbs,
-    return_format: DbfetchReturnFormat,
+    return_format: DataReturnFormats,
     style: DbfetchStyle,
 }
 
@@ -26,44 +27,10 @@ pub struct DbfetchResult {
     data: String,
 }
 
-/// The `DbfetchReturnFormat` enum is used to specify the return format of the `Dbfetch` service. This is dependent on the type of data available from the database.
-#[derive(PartialEq, Debug)]
-pub enum DbfetchReturnFormat {
-    Fasta,
-    Json,
-    Pdb,
-    Mmcif,
-    Xml,
-    Obo,
-    Csv,
-    Tsv,
-    Gff3,
-    Gff2,
-    PatentEquivalents,
-}
-
 /// The `DbfetchStyle` enum is used to specify the style of the return data from the `Dbfetch` service.
 pub enum DbfetchStyle {
     Raw,
     Html,
-}
-
-impl Display for DbfetchReturnFormat {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DbfetchReturnFormat::Fasta => write!(f, "fasta"),
-            DbfetchReturnFormat::Json => write!(f, "json"),
-            DbfetchReturnFormat::Pdb => write!(f, "pdb"),
-            DbfetchReturnFormat::Mmcif => write!(f, "mmcif"),
-            DbfetchReturnFormat::Xml => write!(f, "xml"),
-            DbfetchReturnFormat::Obo => write!(f, "obo"),
-            DbfetchReturnFormat::Csv => write!(f, "csv"),
-            DbfetchReturnFormat::Gff3 => write!(f, "gff3"),
-            DbfetchReturnFormat::Tsv => write!(f, "tab"),
-            DbfetchReturnFormat::Gff2 => write!(f, "gff2"),
-            DbfetchReturnFormat::PatentEquivalents => write!(f, "patent_equivalents"),
-        }
-    }
 }
 
 impl Display for DbfetchIds {
@@ -89,8 +56,9 @@ impl Display for DbfetchStyle {
 impl Default for Dbfetch {
     fn default() -> Self {
         Dbfetch {
+            client: EbioticClient::default(),
             db: dbfetchdbs::DbfetchDbs::EnaSequence,
-            return_format: DbfetchReturnFormat::Fasta,
+            return_format: DataReturnFormats::Fasta,
             style: DbfetchStyle::Raw,
         }
     }
@@ -129,11 +97,13 @@ impl DbfetchIds {
 
 impl Dbfetch {
     pub fn new(
+        client: EbioticClient,
         db: dbfetchdbs::DbfetchDbs,
-        return_format: DbfetchReturnFormat,
+        return_format: DataReturnFormats,
         style: DbfetchStyle,
     ) -> Dbfetch {
         Dbfetch {
+            client,
             db,
             return_format,
             style,
@@ -144,7 +114,7 @@ impl Dbfetch {
         self.db = db;
     }
 
-    pub fn set_return_format(&mut self, format: DbfetchReturnFormat) {
+    pub fn set_return_format(&mut self, format: DataReturnFormats) {
         self.return_format = format;
     }
 
@@ -156,7 +126,7 @@ impl Dbfetch {
         &self.db
     }
 
-    pub fn format(&self) -> &DbfetchReturnFormat {
+    pub fn format(&self) -> &DataReturnFormats {
         &self.return_format
     }
 

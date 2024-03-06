@@ -30,7 +30,7 @@ pub struct Hsp {
     hseq: Record,
 }
 
-/// The `Hit` struct is used to specify the hit from the BLAST search.
+/// The `Hit` struct is used to specify the hit from the BLAST ebisearch.
 #[derive(Deserialize, Debug, Clone)]
 pub struct Hit {
     num: u32,
@@ -39,7 +39,7 @@ pub struct Hit {
     hsps: Vec<Hsp>,
 }
 
-/// The `BlastResult` struct is used to specify the result of the BLAST search.
+/// The `BlastResult` struct is used to specify the result of the BLAST ebisearch.
 #[derive(Deserialize, Debug, Clone)]
 pub struct BlastResult {
     query_id: String,
@@ -232,7 +232,7 @@ impl Service for Blast {
         client: EbioticClient,
         input: Self::InputType,
     ) -> Result<Self::ResultType, EbioticError> {
-        log::info!("Running BLAST search");
+        log::info!("Running BLAST ebisearch");
 
         let response = client
             .post_form(
@@ -300,7 +300,7 @@ impl PollableService for &Blast {
 impl Blast {
     fn parse_raw_results(&self, raw_results: &str) -> Result<BlastResult, EbioticError> {
         let parsed: Value = serde_json::from_str(raw_results)?;
-        let flat = &parsed["BlastOutput2"][0]["report"]["results"]["search"];
+        let flat = &parsed["BlastOutput2"][0]["report"]["results"]["ebisearch"];
 
         if flat != &Value::Null {
             let search: BlastResult = serde_json::from_value(flat.clone())?;

@@ -112,3 +112,4 @@ If you have any questions or need help, feel free to open an issue or reach out 
 - Add logging system beyond print statements (e.g. tracing or log crate)
 - Add more configuration options
 - Safety checks for API usage (?)
+- Citations for tools and APIs 
