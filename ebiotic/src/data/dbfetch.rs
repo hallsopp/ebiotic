@@ -140,11 +140,7 @@ impl Service for Dbfetch {
     type InputType = DbfetchIds;
 
     /// Run the `Dbfetch` service with a list of IDs.
-    async fn run(
-        &self,
-        client: EbioticClient,
-        input: Self::InputType,
-    ) -> Result<Self::ResultType, EbioticError> {
+    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         if !self
             .db
             .available_return_formats()
@@ -159,7 +155,8 @@ impl Service for Dbfetch {
 
         log::info!("Submitting DBfetch request");
 
-        let res = client
+        let res = self
+            .client
             .get(&format!(
                 "{}?db={}&format={}&style={}&id={}",
                 EBI_DBFETCH_ENDPOINT, self.db, self.return_format, self.style, input

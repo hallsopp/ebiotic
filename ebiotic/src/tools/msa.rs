@@ -9,6 +9,7 @@ use crate::errors::EbioticError;
 
 /// The `Clustalo` struct is used to specify the parameters for the `Clustalo` service.
 pub struct Clustalo {
+    pub(crate) client: EbioticClient,
     endpoint: String,
     email: String,
 }
@@ -24,6 +25,7 @@ pub struct ClustaloResult {
 impl Default for Clustalo {
     fn default() -> Self {
         Clustalo {
+            client: EbioticClient::default(),
             endpoint: format!("{}{}", EBI_TOOLS_ENDPOINT, "clustalo/"),
             email: "".to_string(),
         }
@@ -31,8 +33,12 @@ impl Default for Clustalo {
 }
 
 impl Clustalo {
-    pub fn new(endpoint: String, email: String) -> Clustalo {
-        Clustalo { endpoint, email }
+    pub fn new(client: EbioticClient, endpoint: String, email: String) -> Clustalo {
+        Clustalo {
+            client,
+            endpoint,
+            email,
+        }
     }
 
     pub fn set_endpoint(&mut self, endpoint: String) {
@@ -71,17 +77,14 @@ impl Service for Clustalo {
     type InputType = Vec<Record>;
 
     /// Run the `Clustalo` service with the given input.
-    async fn run(
-        &self,
-        client: EbioticClient,
-        input: Self::InputType,
-    ) -> Result<Self::ResultType, EbioticError> {
+    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         let run_endpoint = format!("{}{}", &self.endpoint, "run/");
         let sequences = self.pretty_format_records(input);
 
         log::info!("Running Clustal Omega alignment");
 
-        let response = client
+        let response = self
+            .client
             .post_form(
                 &run_endpoint,
                 &[
@@ -96,27 +99,30 @@ impl Service for Clustalo {
         log::info!("Job ID: {}", &response);
 
         // Polling to wait for the result, however result is not directly returned
-        let _ = client.poll(&poll_endpoint, None, &self).await?;
+        let _ = self.client.poll(&poll_endpoint, None, &self).await?;
 
         log::info!("Fetching results for Job: {}", &response);
 
         // Assuming the polling does not error out, the earlier response number
         // can be used to fetch the results
-        let acn = client
+        let acn = self
+            .client
             .get(&format!(
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/aln-clustal_num"
             ))
             .await?;
 
-        let pim = client
+        let pim = self
+            .client
             .get(&format!(
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/pim"
             ))
             .await?;
 
-        let phylotree = client
+        let phylotree = self
+            .client
             .get(&format!(
                 "{}{}{}{}",
                 &self.endpoint, "result/", &response, "/phylotree"

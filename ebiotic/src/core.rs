@@ -9,6 +9,8 @@ mod network;
 mod reqwest;
 
 pub use self::network::EbioticHttpClient;
+// This will allow us in the future to optionally compile with different clients
+// but maintain the same interface internally
 pub use self::reqwest::EbioticReqwestClient as EbioticClient;
 
 pub(crate) enum PollStatus {
@@ -27,7 +29,6 @@ pub trait Service {
 
     fn run(
         &self,
-        client: EbioticClient,
         input: Self::InputType,
     ) -> impl Future<Output = Result<Self::ResultType, EbioticError>> + Send;
 }

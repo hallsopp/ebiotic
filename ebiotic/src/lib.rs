@@ -26,50 +26,51 @@
 //! Therefore, this trait must be in scope to use any of the services. This can be done by importing it directly or by importing an entire module that contains it. Each utility currently initialises
 //! its own `reqwest::Client` which is used to make the requests. This was done for fine-grained control, but I hope to provide a way to use a custom client in the future.
 //!
-//! Here's an example of how to use the `Blast` service:
-//!
-//! ```rust
-//! use ebiotic::tools::*;
-//!
-//! #[tokio::main]
-//! async fn main() {
-//!    // The `EbioticClient` is an HTTP client wrapper. At the moment, it supports an async `reqwest::Client`, but is modular so more frameworks can be added in the future.
-//!    // This means that the client is configurable, i.e. a proxy or a custom user agent can be set. The client is designed to be initialized once and then passed to the services.
-//!    let client = EbioticClient::default();
-//!
-//!    let blast = Blast::default();
-//!    let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
-//!    // The client is passed to the `run` method along with the query. The `run` method returns a `Result` which can be unwrapped to get the result.
-//!    let result = blast.run(client, query.to_string()).await;
-//! }
-//! ```
-//!
-//! And this is an example of how to use the `Dbfetch` service to query the European Nucleotide Archive (ENA) for a sequence in FASTA format:
+//! This is an example of how to use the `Dbfetch` service to query the European Nucleotide Archive (ENA) for a sequence in FASTA format:
 //!
 //! ```rust
 //! use ebiotic::data::*;
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     let client = EbioticClient::default();
-//!     let dbfetch = Dbfetch::new(DbfetchDbs::EnaSequence, DbfetchReturnFormat::Fasta, DbfetchStyle::Raw);
-//!     let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
+//!    // The `EbioticClient` is an HTTP client wrapper. At the moment, it supports an async `reqwest::Client`, but is modular so more frameworks can be added in the future.
+//!    // This means that the client is configurable, i.e. a proxy or a custom user agent can be set. The client is designed to be initialized once and then passed to the services.
 //!
-//!     // The `Dbfetch` service returns a `DbfetchResult` which can be converted into a `Vec<Record>` using the `into_records` method.
-//!     // I hope to provide a more ergonomic way of doing this in the future.
-//!     let result = dbfetch.run(client, ids).await.unwrap().into_records();
+//!    let client = EbioticClient::default(); // <- Uses an ARC under the hood, so cloning is cheap and ensures a single client pool. It also means that it is thread safe!
+//!    let dbfetch = Dbfetch::new(client.clone(), DbfetchDbs::EnaSequence, DataReturnFormats::Fasta, DbfetchStyle::Raw);
+//!    let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
+//!
+//!    // The `Dbfetch` service returns a `DbfetchResult` which can be converted into a `Vec<Record>` using the `into_records` method.
+//!    // I hope to provide a more ergonomic way of doing this in the future.
+//!    let result = dbfetch.run(ids).await.unwrap().into_records();
 //! }
 //!
 //! // This is also the default configuration for the `Dbfetch` service, so the above can be written as:
 //!
 //! #[tokio::main]
 //! async fn main_fasta() {
-//!    let client = EbioticClient::default();
+//!    // The default initialization of the services also initializes a new `EbioticClient` with the default settings.
+//!    // For this reason, it is recommended to manually initialize the client and clone it if you use multiple services to avoid creating multiple client pools.
 //!    let dbfetch = Dbfetch::default();
+//!
 //!    let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
-//!    let result = dbfetch.run(client, ids).await.unwrap().into_records();
+//!    let result = dbfetch.run(ids).await.unwrap().into_records();
 //! }
 //!```
+//!
+//! And here is an example of how to use the `Blast` service to query the NCBI's sequence database:
+//!
+//! ```rust
+//! use ebiotic::tools::*;
+//!
+//! #[tokio::main]
+//! async fn main() {
+//!    let blast = Blast::default();
+//!    let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
+//!    // The 'run' method returns a `BlastResult` which can be unwrapped.
+//!    let result = blast.run(query.to_string()).await;
+//! }
+//! ```
 //!
 //! ### Synchronous example
 //!
@@ -81,10 +82,9 @@
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!    let client = EbioticClient::default();
 //!    let blast = Blast::default();
 //!    let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
-//!    let result = tokio::task::block_in_place(|| blast.run(client, query.to_string()));
+//!    let result = tokio::task::block_in_place(|| blast.run(query.to_string()));
 //! }
 //! ```
 //!
@@ -92,8 +92,8 @@
 //!
 //! The EbioicClient can be configured with a custom reqwest client. This can be useful for setting platform or application specific settings like a proxy or a timeout.
 //!
-//! ```rust
-//! use ebiotic::tools::*;
+//!```rust
+//! use ebiotic::data::*;
 //! use std::time::Duration;
 //! use reqwest;
 //!
@@ -108,10 +108,10 @@
 //!            .unwrap(),
 //!    );
 //!
-//!    let blast = Blast::default();
-//!    let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
-//!    let result = blast.run(client, query.to_string()).await;
-//! }
+//!    let dbfetch = Dbfetch::new(client, DbfetchDbs::EnaSequence, DataReturnFormats::Fasta, DbfetchStyle::Raw);
+//!    let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
+//!    let result = dbfetch.run(ids).await.unwrap().into_records();
+//!
 //! ```
 
 mod core;

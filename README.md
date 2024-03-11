@@ -12,6 +12,7 @@ Information ([NCBI](https://www.ncbi.nlm.nih.gov/)). It's built to serialize
 and deserialze data using common formats like JSON and specialised bioinformatics formats like FASTA using the `Record`
 data structure from the [rust-bio](https://rust-bio.github.io/) library.
 
+**Disclaimer:**
 The library does not safeguard against misuse of the endpoints (beyond hard-coded polling frequencies) and so it is
 important to read and understand the terms of use for each API before using this library.
 
@@ -37,10 +38,9 @@ use ebiotic::data::*;
 
 #[tokio::main]
 async fn main_fasta() {
-    let client = EbioticClient::Default();
     let dbfetch = Dbfetch::default();
     let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
-    let result = dbfetch.run(client, ids).await.unwrap().into_records();
+    let result = dbfetch.run(ids).await.unwrap().into_records();
 }
 ```
 
@@ -55,24 +55,24 @@ means it can be customised for platform specific requirements, such as using a p
 information on the `reqwest` client can be found in the [reqwest documentation](https://docs.rs/crate/reqwest/latest).
 
 ```rust
-use ebiotic::tools::*;
+use ebiotic::data::*;
 use std::time::Duration;
 use reqwest;
 
 #[tokio::main]
 async fn main_blast() {
+
     let client = EbioticClient::new(
         reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .proxy(reqwest::Proxy::all("http://my-proxy:8080").unwrap())
             .build()
-            .unwrap(),
+            .unwrap()
     );
 
-    let blast = Blast::default();
-    let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
-    let result = blast.run(client, query.to_string()).await;
-}
+    let dbfetch = Dbfetch::new(client, DbfetchDbs::EnaSequence, DataReturnFormats::Fasta, DbfetchStyle::Raw);
+    let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
+    let result = dbfetch.run(ids).await.unwrap().into_records();
 ```
 
 More examples can be found in the [documentation](https://docs.rs/ebiotic). Including how to run in synchronous
@@ -93,6 +93,7 @@ code-bases using thread blocking.
 **Knowledge & Data:**
 
 - DBfetch
+- EBI Search
 
 ## Contributing
 
