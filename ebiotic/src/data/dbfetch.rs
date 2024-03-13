@@ -1,10 +1,8 @@
-use bio::io::fasta::Record;
-
-use std::fmt::{Display, Formatter};
-
 use super::{AvailableReturnFormats, DataReturnFormats, EBI_DBFETCH_ENDPOINT};
 use crate::core::{self, EbioticClient, EbioticHttpClient, Service};
 use crate::errors::EbioticError;
+use bio::io::fasta::Record;
+use std::fmt::{Display, Formatter};
 
 pub mod dbfetchdbs;
 

@@ -1,8 +1,11 @@
 use super::{AvailableReturnFormats, DataReturnFormats, EBI_SEARCH_ENDPOINT};
 use crate::core::{self, EbioticClient, EbioticHttpClient, Service};
+use crate::data::ebisearch::ebisearchquery::EbiSearchQuery;
 use crate::errors::EbioticError;
+use bio::io::fasta::Record;
 
 pub mod ebisearchdomains;
+pub mod ebisearchquery;
 
 #[derive(Debug, Clone)]
 pub struct EbiSearch {
@@ -23,6 +26,16 @@ impl Default for EbiSearch {
             domain: ebisearchdomains::EbiSearchDomains::Uniprot,
             return_format: DataReturnFormats::Json,
         }
+    }
+}
+
+impl EbiSearchResult {
+    pub fn data(&self) -> &self {
+        &self.data
+    }
+
+    pub fn into_records(self) -> Result<Vec<Record>, EbioticError> {
+        core::parse_fa_from_bufread(&self.data)
     }
 }
 
@@ -47,15 +60,15 @@ impl EbiSearch {
         self.return_format = return_format;
     }
 
-    pub fn set_client(&mut self, client: EbioticClient) {
+    pub fn client(&mut self, client: EbioticClient) {
         self.client = client;
     }
 
-    pub fn get_domain(&self) -> &ebisearchdomains::EbiSearchDomains {
+    pub fn domain(&self) -> &ebisearchdomains::EbiSearchDomains {
         &self.domain
     }
 
-    pub fn get_return_format(&self) -> &DataReturnFormats {
+    pub fn return_format(&self) -> &DataReturnFormats {
         &self.return_format
     }
 
@@ -67,29 +80,28 @@ impl EbiSearch {
 
 impl Service for EbiSearch {
     type ResultType = Result<EbiSearchResult, EbioticError>;
-    type InputType = String;
+    type InputType = EbiSearchQuery;
 
     async fn run(&self, query: Self::input) -> Self::output {
-        let url = self.build_url(query);
+        let query_url = query.build()?;
+        let url = self.concat_url(query_url);
         let response = self.client.get(&url).await?;
         Ok(EbiSearchResult { data: response })
     }
 }
 
 impl EbiSearch {
-    fn build_url(&self, query: String) -> String {
+    fn concat_url(&self, query: &String) -> String {
         let mut url = format!("{}", EBI_SEARCH_ENDPOINT);
 
         match self.domain {
-            ebisearchdomains::EbiSearchDomains::All => {
-                url.push_str(self.domain.as_str());
-            }
+            ebisearchdomains::EbiSearchDomains::All => {}
             _ => {
                 url.push_str(format!("{}/", self.domain.as_str()));
             }
         }
 
-        url.push_str(format!("?query={}", query));
+        url.push_str(format!("{}", query.query()));
         url.push_str(format!("&format={}", self.return_format));
         return url;
     }

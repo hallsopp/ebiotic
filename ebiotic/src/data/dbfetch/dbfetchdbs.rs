@@ -1,6 +1,5 @@
-use std::fmt::{Display, Formatter};
-
 use super::{AvailableReturnFormats, DataReturnFormats};
+use std::fmt::{Display, Formatter};
 
 // WILL HOPEFULLY REPLACE ALL OF THIS ONCE THE MACROS ARE WORKING
 

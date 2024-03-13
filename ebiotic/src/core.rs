@@ -1,9 +1,7 @@
+use crate::errors::EbioticError;
 use bio::io::fasta::{Reader, Record};
-
 use std::future::Future;
 use std::io::Cursor;
-
-use crate::errors::EbioticError;
 
 mod network;
 mod reqwest;
