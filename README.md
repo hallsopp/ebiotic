@@ -9,7 +9,7 @@ Ebiotic provides a light-weight asynchronous interface for some popular Bioinfor
 enable access to the rich data and tools provided by institutes like the European Bioinformatics
 Institute ([EBI](https://www.ebi.ac.uk/)) and the National Center for Biotechnology
 Information ([NCBI](https://www.ncbi.nlm.nih.gov/)). It's built to serialize
-and deserialze data using common formats like JSON and specialised bioinformatics formats like FASTA using the `Record`
+and deserialze data using common formats like JSON and specialised bioinformatics formats like FASTA, using the `Record`
 data structure from the [rust-bio](https://rust-bio.github.io/) library.
 
 **Disclaimer:**
@@ -93,13 +93,13 @@ code-bases using thread blocking.
 **Knowledge & Data:**
 
 - DBfetch
-- EBI Search
+- EBI Search (very much a WIP)
 
 ## Contributing
 
 Contributions are more than welcome. To implement a new endpoint follow the structure of the current modules and utilise
 the functionality provided by the `ebiotic::core` module. Alternatively, pick something from the TODO list and try to
-implement.
+implement or find something in the code that you can improve!
 If you have any questions or need help, feel free to open an issue or reach out to me on via email.
 
 ## TODOs

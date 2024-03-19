@@ -10,7 +10,7 @@
 // TODO - change the docs here to reflect the current state of the module
 
 pub mod dbfetch;
-mod ebisearch;
+// mod ebisearch;
 
 pub use dbfetch::{dbfetchdbs::DbfetchDbs, Dbfetch, DbfetchIds, DbfetchStyle};
 use std::fmt::{Display, Formatter};

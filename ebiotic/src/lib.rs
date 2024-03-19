@@ -111,8 +111,8 @@
 //!    let dbfetch = Dbfetch::new(client, DbfetchDbs::EnaSequence, DataReturnFormats::Fasta, DbfetchStyle::Raw);
 //!    let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
 //!    let result = dbfetch.run(ids).await.unwrap().into_records();
-//!
-//! ```
+//! }
+//!```
 
 mod core;
 pub mod data;

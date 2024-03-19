@@ -38,7 +38,7 @@ impl Display for SortOrder {
 impl Display for QueryCommand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            QueryCommand::Query(query) => write!(f, "query={}", query),
+            QueryCommand::Query(query) => write!(f, "?query={}", query),
             QueryCommand::Xref => write!(f, "xref"),
             QueryCommand::Entry => write!(f, "entry"),
             QueryCommand::AutoComplete => write!(f, "autoComplete"),
@@ -70,7 +70,9 @@ impl EbiSearchQuery {
             return Err(EbioticError::EmptyEbiSearchQuery);
         }
 
-        let mut url = format!("{}", query);
+        let mut url = String::new();
+
+        if &self.query.
 
         if let Some(filter) = &self.filter {
             url.push_str("&filter=");
