@@ -200,10 +200,11 @@ mod tests {
 
     #[test]
     fn clustalo_new_creates_correct_instance() {
+        let client = EbioticClient::default();
         let endpoint = "http://example.com".to_string();
         let email = "test@example.com".to_string();
 
-        let clustalo = Clustalo::new(endpoint.clone(), email.clone());
+        let clustalo = Clustalo::new(client, endpoint.clone(), email.clone());
 
         assert_eq!(clustalo.endpoint(), &endpoint);
         assert_eq!(clustalo.email(), &email);

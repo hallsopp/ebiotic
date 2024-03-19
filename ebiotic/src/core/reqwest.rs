@@ -7,7 +7,7 @@ use crate::errors::EbioticError;
 use super::network::EbioticHttpClient;
 
 /// The `EbioticReqwestClient` struct is used to specify the Reqwest client for the Ebiotic API.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct EbioticReqwestClient {
     pub(crate) client: Client,
 }

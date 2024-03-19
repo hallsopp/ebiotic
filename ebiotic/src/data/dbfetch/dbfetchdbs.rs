@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 
 // WILL HOPEFULLY REPLACE ALL OF THIS ONCE THE MACROS ARE WORKING
 
+#[derive(Debug, Clone)]
 pub enum DbfetchDbs {
     AlphaFoldDb,
     Cdp,

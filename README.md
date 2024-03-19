@@ -24,7 +24,7 @@ the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-ebiotic = "0.0.23"
+ebiotic = "0.0.24"
 ```
 
 ## Usage
@@ -61,7 +61,6 @@ use reqwest;
 
 #[tokio::main]
 async fn main_blast() {
-
     let client = EbioticClient::new(
         reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
@@ -73,6 +72,7 @@ async fn main_blast() {
     let dbfetch = Dbfetch::new(client, DbfetchDbs::EnaSequence, DataReturnFormats::Fasta, DbfetchStyle::Raw);
     let ids = DbfetchIds::new(vec!["M10051".to_string(), "M10052".to_string()]);
     let result = dbfetch.run(ids).await.unwrap().into_records();
+}
 ```
 
 More examples can be found in the [documentation](https://docs.rs/ebiotic). Including how to run in synchronous

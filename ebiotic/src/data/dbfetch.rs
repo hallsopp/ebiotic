@@ -16,6 +16,7 @@ pub struct Dbfetch {
 }
 
 /// The `DbfetchIds` struct is used to specify the IDs to be fetched from the `Dbfetch` service.
+#[derive(Debug, Clone)]
 pub struct DbfetchIds {
     ids: Vec<String>,
 }
@@ -26,6 +27,7 @@ pub struct DbfetchResult {
 }
 
 /// The `DbfetchStyle` enum is used to specify the style of the return data from the `Dbfetch` service.
+#[derive(Debug, Clone)]
 pub enum DbfetchStyle {
     Raw,
     Html,

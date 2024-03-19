@@ -22,7 +22,7 @@ pub const EBI_DBFETCH_ENDPOINT: &str = "https://www.ebi.ac.uk/Tools/dbfetch/";
 pub const EBI_SEARCH_ENDPOINT: &str = "https://www.ebi.ac.uk/ebisearch/ws/rest/";
 
 /// The `DataReturnFormats` enum is used to specify the return format of the various data retrieval services. This is dependent on the type of data available from the database.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum DataReturnFormats {
     Fasta,
     Json,
