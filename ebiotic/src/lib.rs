@@ -17,7 +17,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! ebiotic = "0.0.24"
+//! ebiotic = "0.0.25"
 //! ```
 //!
 //! ## Examples

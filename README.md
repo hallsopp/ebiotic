@@ -24,7 +24,7 @@ the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-ebiotic = "0.0.24"
+ebiotic = "0.0.25"
 ```
 
 ## Usage
