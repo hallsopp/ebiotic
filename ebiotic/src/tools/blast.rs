@@ -30,7 +30,7 @@ pub struct Hsp {
     hseq: Record,
 }
 
-/// The `Hit` struct is used to specify the hit from the BLAST search.
+/// The `Hit` struct is used to specify the hit from the BLAST ebisearch.
 #[derive(Deserialize, Debug, Clone)]
 pub struct Hit {
     num: u32,
@@ -39,7 +39,7 @@ pub struct Hit {
     hsps: Vec<Hsp>,
 }
 
-/// The `BlastResult` struct is used to specify the result of the BLAST search.
+/// The `BlastResult` struct is used to specify the result of the BLAST ebisearch.
 #[derive(Deserialize, Debug, Clone)]
 pub struct BlastResult {
     query_id: String,
@@ -50,6 +50,7 @@ pub struct BlastResult {
 
 /// The `Blast` struct is used to specify the parameters for the `Blast` service.
 pub struct Blast {
+    pub(crate) client: EbioticClient,
     endpoint: String,
     program: String,
     database: String,
@@ -77,6 +78,7 @@ where
 impl Default for Blast {
     fn default() -> Self {
         Blast {
+            client: EbioticClient::default(),
             endpoint: BLAST_ENDPOINT.to_string(),
             program: "blastp".to_string(),
             database: "nr".to_string(),
@@ -90,6 +92,7 @@ impl Default for Blast {
 
 impl Blast {
     pub fn new(
+        client: EbioticClient,
         endpoint: String,
         program: String,
         database: String,
@@ -99,6 +102,7 @@ impl Blast {
         tool: String,
     ) -> Blast {
         Blast {
+            client,
             endpoint,
             program,
             matrix,
@@ -227,12 +231,11 @@ impl Service for Blast {
     type InputType = String;
 
     /// Run the `Blast` service with a query.
-    async fn run(
-        &self,
-        client: EbioticClient,
-        input: Self::InputType,
-    ) -> Result<Self::ResultType, EbioticError> {
-        let response = client
+    async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
+        log::info!("Running BLAST ebisearch");
+
+        let response = self
+            .client
             .post_form(
                 &self.endpoint,
                 &[
@@ -248,9 +251,12 @@ impl Service for Blast {
             )
             .await?;
 
-        let (rid, _rtoe) = &self.fetch_ridrtoe(&response);
+        let (rid, rtoe) = &self.fetch_ridrtoe(&response);
 
-        let _search_info = client
+        log::info!("RID: {}, RTOE: {}", rid, rtoe);
+
+        let _search_info = self
+            .client
             .poll(
                 &self.endpoint,
                 Some(&[
@@ -262,7 +268,10 @@ impl Service for Blast {
             )
             .await?;
 
-        let search_results = client
+        log::info!("Fetching results for RID: {}", rid);
+
+        let search_results = self
+            .client
             .post_form(
                 &self.endpoint,
                 &[("CMD", "Get"), ("FORMAT_TYPE", "JSON2_S"), ("RID", &rid)],
@@ -335,6 +344,7 @@ mod tests {
     #[test]
     fn test_update_functions() {
         let mut blast = Blast::new(
+            EbioticClient::default(),
             "endpoint".to_string(),
             "program".to_string(),
             "database".to_string(),

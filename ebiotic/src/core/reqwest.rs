@@ -7,7 +7,7 @@ use crate::errors::EbioticError;
 use super::network::EbioticHttpClient;
 
 /// The `EbioticReqwestClient` struct is used to specify the Reqwest client for the Ebiotic API.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct EbioticReqwestClient {
     pub(crate) client: Client,
 }
@@ -63,7 +63,7 @@ impl EbioticHttpClient for EbioticReqwestClient {
             match status {
                 PollStatus::Finished => return Ok(response),
                 PollStatus::Running(sleep_time) => {
-                    println!("Job is still running, sleeping for {} seconds", sleep_time);
+                    log::info!("Job is still running, sleeping for {} seconds", sleep_time);
                     time::sleep(Duration::from_secs(sleep_time)).await;
                 }
                 PollStatus::Error(err) => return Err(err),

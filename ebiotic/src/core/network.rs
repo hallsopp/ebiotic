@@ -8,7 +8,9 @@ pub trait EbioticHttpClient: Default + Send + Clone {
         endpoint: &str,
         body: &[(&str, &str)],
     ) -> Result<String, EbioticError>;
+
     async fn get(&self, endpoint: &str) -> Result<String, EbioticError>;
+
     async fn poll<F>(
         &self,
         endpoint: &str,
