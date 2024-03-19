@@ -303,7 +303,7 @@ impl PollableService for &Blast {
 impl Blast {
     fn parse_raw_results(&self, raw_results: &str) -> Result<BlastResult, EbioticError> {
         let parsed: Value = serde_json::from_str(raw_results)?;
-        let flat = &parsed["BlastOutput2"][0]["report"]["results"]["ebisearch"];
+        let flat = &parsed["BlastOutput2"][0]["report"]["results"]["search"];
 
         if flat != &Value::Null {
             let search: BlastResult = serde_json::from_value(flat.clone())?;
