@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 pub struct EbiSearchQuery {
-    query: Vec<QueryCommand<'_>>,
+    query: Vec<QueryCommand>,
     filters: Option<EbiSearchFilters>,
 }
 
@@ -17,15 +17,17 @@ pub struct EbiSearchFilters {
     sort: Option<HashMap<String, SortOrder>>,
 }
 
+#[derive(Debug, Clone)]
 pub enum SortOrder {
     Ascending,
     Descending,
 }
 
-pub enum QueryCommand<'a> {
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum QueryCommand {
     QueryStr(String),
     Xref(Option<EbiSearchDomains>),
-    Entry(Option<&'a AccessionIds>),
+    Entry(Option<AccessionIds>),
     AutoComplete,
     TopTerms,
     SeqToolResults,
@@ -60,11 +62,11 @@ impl Display for QueryCommand {
                     write!(f, "entry")
                 }
             }
-            QueryCommand::AutoComplete => write!(f, "autoComplete"),
-            QueryCommand::TopTerms => write!(f, "topTerms"),
-            QueryCommand::SeqToolResults => write!(f, "seqToolResults"),
+            QueryCommand::AutoComplete => write!(f, "autocomplete"),
+            QueryCommand::TopTerms => write!(f, "topterms"),
+            QueryCommand::SeqToolResults => write!(f, "seqtoolresults"),
             QueryCommand::Download => write!(f, "download"),
-            QueryCommand::MoreLikeThis => write!(f, "moreLikeThis"),
+            QueryCommand::MoreLikeThis => write!(f, "morelikethis"),
         }
     }
 }
@@ -89,6 +91,23 @@ impl EbiSearchQuery {
 
     pub fn build(&self) -> Result<String, EbioticError> {
         let mut url = String::new();
+
+        for command in &self.query {
+            if url.is_empty() {
+                if self.query.len() > 1 {
+                    match command {
+                        QueryCommand::QueryStr(query) => {
+                            return Err(EbioticError::QueryStrNotFirst);
+                        }
+                        _ => {
+                            url.push_str(&format!("{}", command));
+                        }
+                    }
+                }
+            } else {
+                url.push_str(&format!("{}", command));
+            }
+        }
 
         if let Some(filters) = &self.filters {
             if let Some(f) = &filters.filter {
@@ -156,10 +175,6 @@ impl EbiSearchFilters {
         self.sort = Some(sort);
     }
 
-    pub fn query(&self) -> &Vec<QueryCommand> {
-        &self.query
-    }
-
     pub fn filter(&self) -> &Option<HashMap<String, String>> {
         &self.filter
     }
@@ -178,5 +193,73 @@ impl EbiSearchFilters {
 
     pub fn sort(&self) -> &Option<HashMap<String, SortOrder>> {
         &self.sort
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn build_query_with_single_command() {
+        let mut query = Vec::new();
+        query.push(QueryCommand::QueryStr("test".to_string()));
+        let search_query = EbiSearchQuery::new(query).unwrap();
+        let result = search_query.build().unwrap();
+        assert_eq!(result, "?query=test");
+    }
+
+    #[test]
+    fn build_query_with_multiple_commands() {
+        let mut query = Vec::new();
+        query.push(QueryCommand::QueryStr("test".to_string()));
+        query.push(QueryCommand::AutoComplete);
+        let search_query = EbiSearchQuery::new(query).unwrap();
+        let result = search_query.build().unwrap();
+        assert_eq!(result, "?query=testautocomplete");
+    }
+
+    #[test]
+    fn build_query_with_filters() {
+        let mut query = Vec::new();
+        query.push(QueryCommand::QueryStr("test".to_string()));
+        let mut search_query = EbiSearchQuery::new(query).unwrap();
+        let mut filters = EbiSearchFilters::new();
+        filters.set_size(10);
+        search_query.filters = Some(filters);
+        let result = search_query.build().unwrap();
+        assert_eq!(result, "?query=test&size=10");
+    }
+
+    #[test]
+    fn build_query_with_sort_order() {
+        let mut query = Vec::new();
+        query.push(QueryCommand::QueryStr("test".to_string()));
+        let mut search_query = EbiSearchQuery::new(query).unwrap();
+        let mut filters = EbiSearchFilters::new();
+        let mut sort = HashMap::new();
+        sort.insert("field".to_string(), SortOrder::Ascending);
+        filters.set_sort(sort);
+        search_query.filters = Some(filters);
+        let result = search_query.build().unwrap();
+        assert_eq!(result, "?query=test&sort=field:ascending");
+    }
+
+    #[test]
+    fn build_query_with_empty_query() {
+        let query = Vec::new();
+        let search_query = EbiSearchQuery::new(query);
+        assert!(search_query.is_err());
+    }
+
+    #[test]
+    fn build_query_with_too_many_commands() {
+        let mut query = Vec::new();
+        for _ in 0..5 {
+            query.push(QueryCommand::QueryStr("test".to_string()));
+        }
+        let search_query = EbiSearchQuery::new(query);
+        assert!(search_query.is_err());
     }
 }

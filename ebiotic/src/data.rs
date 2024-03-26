@@ -12,7 +12,7 @@
 pub mod dbfetch;
 mod ebisearch;
 
-pub use dbfetch::{dbfetchdbs::DbfetchDbs, Dbfetch, DbfetchIds, DbfetchStyle};
+pub use dbfetch::{dbfetchdbs::DbfetchDbs, Dbfetch, DbfetchStyle};
 use std::fmt::{Display, Formatter};
 
 pub use crate::core::EbioticClient;
@@ -38,7 +38,7 @@ pub enum DataReturnFormats {
 }
 
 /// The `DbfetchIds` struct is used to specify the IDs to be fetched from the `Dbfetch` service.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AccessionIds {
     ids: Vec<String>,
 }

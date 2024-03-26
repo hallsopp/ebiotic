@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use super::{AvailableReturnFormats, DataReturnFormats};
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum EbiSearchDomains {
     All,
     Uniprot,
@@ -31,7 +32,7 @@ pub enum EbiSearchDomains {
 impl Display for EbiSearchDomains {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EbiSearchDomains::All => write!(f, ""),
+            EbiSearchDomains::All => write!(f, "/"),
             EbiSearchDomains::Uniprot => write!(f, "uniprot"),
             EbiSearchDomains::Ena => write!(f, "ena"),
             EbiSearchDomains::Embl => write!(f, "embl"),

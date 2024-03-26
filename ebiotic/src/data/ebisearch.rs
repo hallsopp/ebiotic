@@ -29,11 +29,11 @@ impl Default for EbiSearch {
 }
 
 impl EbiSearchResult {
-    pub fn data(&self) -> &self {
-        &self.data
+    pub fn data(self) -> String {
+        self.data
     }
 
-    pub fn into_records(self) -> Result<Vec<Record>, EbioticError> {
+    pub fn into_records(&self) -> Result<Vec<Record>, EbioticError> {
         core::parse_fa_from_bufread(&self.data)
     }
 }
@@ -78,12 +78,12 @@ impl EbiSearch {
 }
 
 impl Service for EbiSearch {
-    type ResultType = Result<EbiSearchResult, EbioticError>;
+    type ResultType = EbiSearchResult;
     type InputType = ebisearchquery::EbiSearchQuery;
 
-    async fn run(&self, query: Self::input) -> Self::output {
+    async fn run(&self, query: Self::InputType) -> Result<Self::ResultType, EbioticError> {
         let query_url = query.build()?;
-        let url = self.concat_url(query_url);
+        let url = self.concat_url(&query_url);
         let response = self.client.get(&url).await?;
         Ok(EbiSearchResult { data: response })
     }
@@ -96,12 +96,12 @@ impl EbiSearch {
         match self.domain {
             ebisearchdomains::EbiSearchDomains::All => {}
             _ => {
-                url.push_str(format!("{}/", self.domain.as_str()));
+                url.push_str(&format!("{}/", self.domain));
             }
         }
 
-        url.push_str(format!("{}", query.query()));
-        url.push_str(format!("&format={}", self.return_format));
+        url.push_str(&format!("{}", query));
+        url.push_str(&format!("&format={}", self.return_format));
         return url;
     }
 }
