@@ -1,4 +1,4 @@
-use super::{AvailableReturnFormats, DataReturnFormats, EBI_DBFETCH_ENDPOINT};
+use super::{AccessionIds, AvailableReturnFormats, DataReturnFormats, EBI_DBFETCH_ENDPOINT};
 use crate::core::{self, EbioticClient, EbioticHttpClient, Service};
 use crate::errors::EbioticError;
 use bio::io::fasta::Record;
@@ -15,12 +15,6 @@ pub struct Dbfetch {
     style: DbfetchStyle,
 }
 
-/// The `DbfetchIds` struct is used to specify the IDs to be fetched from the `Dbfetch` service.
-#[derive(Debug, Clone)]
-pub struct DbfetchIds {
-    ids: Vec<String>,
-}
-
 #[derive(Debug, Clone)]
 pub struct DbfetchResult {
     data: String,
@@ -31,17 +25,6 @@ pub struct DbfetchResult {
 pub enum DbfetchStyle {
     Raw,
     Html,
-}
-
-impl Display for DbfetchIds {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut ids = String::new();
-        for id in &self.ids {
-            ids.push_str(id);
-            ids.push(',');
-        }
-        write!(f, "{}", ids)
-    }
 }
 
 impl Display for DbfetchStyle {
@@ -77,21 +60,6 @@ impl DbfetchResult {
     /// Get the raw data from the `Dbfetch` service. This is useful if you want to handle the data yourself.
     pub fn data(self) -> String {
         self.data
-    }
-}
-
-impl DbfetchIds {
-    /// Create a new `DbfetchIds` object with a list of IDs.
-    pub fn new(ids: Vec<String>) -> DbfetchIds {
-        DbfetchIds { ids }
-    }
-
-    pub fn set_ids(&mut self, ids: Vec<String>) {
-        self.ids = ids;
-    }
-
-    pub fn ids(&self) -> &Vec<String> {
-        &self.ids
     }
 }
 
@@ -137,7 +105,7 @@ impl Dbfetch {
 
 impl Service for Dbfetch {
     type ResultType = DbfetchResult;
-    type InputType = DbfetchIds;
+    type InputType = AccessionIds;
 
     /// Run the `Dbfetch` service with a list of IDs.
     async fn run(&self, input: Self::InputType) -> Result<Self::ResultType, EbioticError> {
