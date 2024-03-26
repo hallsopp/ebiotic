@@ -1,9 +1,15 @@
+use super::{ebisearchdomains::EbiSearchDomains, AccessionIds};
 use crate::errors::EbioticError;
 use std::collections::HashMap;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 
 pub struct EbiSearchQuery {
-    query: Vec<QueryCommand>,
+    query: Vec<QueryCommand<'_>>,
+    filters: Option<EbiSearchFilters>,
+}
+
+#[derive(Debug, Clone)]
+pub struct EbiSearchFilters {
     filter: Option<HashMap<String, String>>,
     size: Option<u16>,
     start: Option<u32>,
@@ -16,18 +22,19 @@ pub enum SortOrder {
     Descending,
 }
 
-pub enum QueryCommand {
-    Query(String),
-    Xref,
-    Entry,
+pub enum QueryCommand<'a> {
+    QueryStr(String),
+    Xref(Option<EbiSearchDomains>),
+    Entry(Option<&'a AccessionIds>),
     AutoComplete,
     TopTerms,
     SeqToolResults,
     Download,
+    MoreLikeThis,
 }
 
 impl Display for SortOrder {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             SortOrder::Ascending => write!(f, "ascending"),
             SortOrder::Descending => write!(f, "descending"),
@@ -36,15 +43,28 @@ impl Display for SortOrder {
 }
 
 impl Display for QueryCommand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            QueryCommand::Query(query) => write!(f, "?query={}", query),
-            QueryCommand::Xref => write!(f, "xref"),
-            QueryCommand::Entry => write!(f, "entry"),
+            QueryCommand::QueryStr(query) => write!(f, "?query={}", query),
+            QueryCommand::Xref(domain) => {
+                if let Some(domain) = domain {
+                    write!(f, "xref/{}", domain)
+                } else {
+                    write!(f, "xref")
+                }
+            }
+            QueryCommand::Entry(ids) => {
+                if let Some(ids) = ids {
+                    write!(f, "entry/{}", ids)
+                } else {
+                    write!(f, "entry")
+                }
+            }
             QueryCommand::AutoComplete => write!(f, "autoComplete"),
             QueryCommand::TopTerms => write!(f, "topTerms"),
             QueryCommand::SeqToolResults => write!(f, "seqToolResults"),
             QueryCommand::Download => write!(f, "download"),
+            QueryCommand::MoreLikeThis => write!(f, "moreLikeThis"),
         }
     }
 }
@@ -55,55 +75,65 @@ impl EbiSearchQuery {
     // This will be a good place to implement those checks.
 
     pub fn new(query: Vec<QueryCommand>) -> Result<EbiSearchQuery, EbioticError> {
+        if query.len() > 4 {
+            return Err(EbioticError::TooManyQueryCommands);
+        } else if query.is_empty() {
+            return Err(EbioticError::EmptyEbiSearchQuery);
+        }
+
         Ok(EbiSearchQuery {
             query: query,
+            filters: None,
+        })
+    }
+
+    pub fn build(&self) -> Result<String, EbioticError> {
+        let mut url = String::new();
+
+        if let Some(filters) = &self.filters {
+            if let Some(f) = &filters.filter {
+                url.push_str("&filter=");
+                for (key, value) in f {
+                    url.push_str(&format!("{}:{}", key, value));
+                }
+            }
+
+            if let Some(size) = &filters.size {
+                url.push_str(&format!("&size={}", size));
+            }
+
+            if let Some(start) = &filters.start {
+                url.push_str(&format!("&start={}", start));
+            }
+
+            if let Some(fields) = &filters.fields {
+                url.push_str("&fields=");
+                for field in fields {
+                    url.push_str(&format!("{},", field));
+                }
+            }
+
+            if let Some(sort) = &filters.sort {
+                url.push_str("&sort=");
+                for (key, value) in sort {
+                    url.push_str(&format!("{}:{}", key, value));
+                }
+            }
+        }
+
+        Ok(url)
+    }
+}
+
+impl EbiSearchFilters {
+    pub fn new() -> EbiSearchFilters {
+        EbiSearchFilters {
             filter: None,
             size: None,
             start: None,
             fields: None,
             sort: None,
-        })
-    }
-
-    pub fn build(&self, query: String) -> Result<String, EbioticError> {
-        if &self.query.is_empty() {
-            return Err(EbioticError::EmptyEbiSearchQuery);
         }
-
-        let mut url = String::new();
-
-        if &self.query.
-
-        if let Some(filter) = &self.filter {
-            url.push_str("&filter=");
-            for (key, value) in filter {
-                url.push_str(&format!("{}:{}", key, value));
-            }
-        }
-
-        if let Some(size) = &self.size {
-            url.push_str(&format!("&size={}", size));
-        }
-
-        if let Some(start) = &self.start {
-            url.push_str(&format!("&start={}", start));
-        }
-
-        if let Some(fields) = &self.fields {
-            url.push_str("&fields=");
-            for field in fields {
-                url.push_str(&format!("{},", field));
-            }
-        }
-
-        if let Some(sort) = &self.sort {
-            url.push_str("&sort=");
-            for (key, value) in sort {
-                url.push_str(&format!("{}:{}", key, value));
-            }
-        }
-
-        Ok(url)
     }
 
     pub fn set_filter(&mut self, filter: HashMap<String, String>) {

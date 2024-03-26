@@ -1,6 +1,5 @@
-use super::{AvailableReturnFormats, DataReturnFormats, EBI_SEARCH_ENDPOINT};
+use super::{AccessionIds, AvailableReturnFormats, DataReturnFormats, EBI_SEARCH_ENDPOINT};
 use crate::core::{self, EbioticClient, EbioticHttpClient, Service};
-use crate::data::ebisearch::ebisearchquery::EbiSearchQuery;
 use crate::errors::EbioticError;
 use bio::io::fasta::Record;
 
@@ -80,7 +79,7 @@ impl EbiSearch {
 
 impl Service for EbiSearch {
     type ResultType = Result<EbiSearchResult, EbioticError>;
-    type InputType = EbiSearchQuery;
+    type InputType = ebisearchquery::EbiSearchQuery;
 
     async fn run(&self, query: Self::input) -> Self::output {
         let query_url = query.build()?;

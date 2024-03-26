@@ -10,7 +10,7 @@
 // TODO - change the docs here to reflect the current state of the module
 
 pub mod dbfetch;
-// mod ebisearch;
+mod ebisearch;
 
 pub use dbfetch::{dbfetchdbs::DbfetchDbs, Dbfetch, DbfetchIds, DbfetchStyle};
 use std::fmt::{Display, Formatter};
@@ -37,8 +37,40 @@ pub enum DataReturnFormats {
     PatentEquivalents,
 }
 
+/// The `DbfetchIds` struct is used to specify the IDs to be fetched from the `Dbfetch` service.
+#[derive(Debug, Clone)]
+pub struct AccessionIds {
+    ids: Vec<String>,
+}
+
 trait AvailableReturnFormats {
     fn available_return_formats(&self) -> Vec<DataReturnFormats>;
+}
+
+impl AccessionIds {
+    /// Create a new `AccessionIds` object with a list of IDs.
+    pub fn new(ids: Vec<String>) -> AccessionIds {
+        AccessionIds { ids }
+    }
+
+    pub fn set_ids(&mut self, ids: Vec<String>) {
+        self.ids = ids;
+    }
+
+    pub fn ids(&self) -> &Vec<String> {
+        &self.ids
+    }
+}
+
+impl Display for AccessionIds {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut ids = String::new();
+        for id in &self.ids {
+            ids.push_str(id);
+            ids.push(',');
+        }
+        write!(f, "{}", ids)
+    }
 }
 
 impl Display for DataReturnFormats {
