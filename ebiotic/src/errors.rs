@@ -22,6 +22,6 @@ pub enum EbioticError {
     EmptyEbiSearchQuery,
     #[error("Too many query commands. Maximum of 4 allowed.")]
     TooManyQueryCommands,
-    #[error("Query string must be the last or only query command.")]
-    QueryStrNotFirst,
+    #[error("Query string/search term must be the last or only command.")]
+    QueryStrOrTermNotFirst,
 }

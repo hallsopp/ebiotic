@@ -1,4 +1,5 @@
 use super::{ebisearchdomains::EbiSearchDomains, AccessionIds};
+use crate::core::EbioticResult;
 use crate::errors::EbioticError;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -28,6 +29,7 @@ pub enum QueryCommand {
     QueryStr(String),
     Xref(Option<EbiSearchDomains>),
     Entry(Option<AccessionIds>),
+    Term(String),
     AutoComplete,
     TopTerms,
     SeqToolResults,
@@ -62,6 +64,7 @@ impl Display for QueryCommand {
                     write!(f, "entry")
                 }
             }
+            QueryCommand::Term(term) => write!(f, "?term={}", term),
             QueryCommand::AutoComplete => write!(f, "autocomplete"),
             QueryCommand::TopTerms => write!(f, "topterms"),
             QueryCommand::SeqToolResults => write!(f, "seqtoolresults"),
@@ -76,7 +79,7 @@ impl EbiSearchQuery {
     // Some fields are required, some are optional, and some are mutually exclusive.
     // This will be a good place to implement those checks.
 
-    pub fn new(query: Vec<QueryCommand>) -> Result<EbiSearchQuery, EbioticError> {
+    pub fn new(query: Vec<QueryCommand>) -> EbioticResult<EbiSearchQuery> {
         if query.len() > 4 {
             return Err(EbioticError::TooManyQueryCommands);
         } else if query.is_empty() {
@@ -89,23 +92,20 @@ impl EbiSearchQuery {
         })
     }
 
-    pub fn build(&self) -> Result<String, EbioticError> {
+    pub fn build(&self) -> EbioticResult<String> {
         let mut url = String::new();
 
-        for command in &self.query {
-            if url.is_empty() {
-                if self.query.len() > 1 {
-                    match command {
-                        QueryCommand::QueryStr(query) => {
-                            return Err(EbioticError::QueryStrNotFirst);
-                        }
-                        _ => {
-                            url.push_str(&format!("{}", command));
-                        }
+        for (i, command) in self.query.iter().enumerate() {
+            match command {
+                QueryCommand::QueryStr(_) | QueryCommand::Term(_) => {
+                    if i != self.query.len() - 1 {
+                        return Err(EbioticError::QueryStrOrTermNotFirst);
                     }
+                    url.push_str(&format!("{}", command));
                 }
-            } else {
-                url.push_str(&format!("{}", command));
+                _ => {
+                    url.push_str(&format!("{}/", command));
+                }
             }
         }
 
@@ -211,6 +211,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn build_query_with_multiple_commands() {
         let mut query = Vec::new();
         query.push(QueryCommand::QueryStr("test".to_string()));

@@ -1,5 +1,5 @@
 use super::{AccessionIds, AvailableReturnFormats, DataReturnFormats, EBI_SEARCH_ENDPOINT};
-use crate::core::{self, EbioticClient, EbioticHttpClient, Service};
+use crate::core::{self, EbioticClient, EbioticHttpClient, EbioticResult, Service};
 use crate::errors::EbioticError;
 use bio::io::fasta::Record;
 
@@ -51,6 +51,30 @@ impl EbiSearch {
         }
     }
 
+    pub async fn xref(&self) -> EbioticResult<EbiSearchResult> {
+        let query =
+            ebisearchquery::EbiSearchQuery::new(vec![ebisearchquery::QueryCommand::Xref(None)])?;
+        self.run(query).await
+    }
+
+    pub async fn xref_domain(
+        &self,
+        domain: ebisearchdomains::EbiSearchDomains,
+    ) -> EbioticResult<EbiSearchResult> {
+        let query = ebisearchquery::EbiSearchQuery::new(vec![ebisearchquery::QueryCommand::Xref(
+            Some(domain),
+        )])?;
+        self.run(query).await
+    }
+
+    pub async fn autocomplete(&self, term: String) -> EbioticResult<EbiSearchResult> {
+        let query = ebisearchquery::EbiSearchQuery::new(vec![
+            ebisearchquery::QueryCommand::AutoComplete,
+            ebisearchquery::QueryCommand::Term(term),
+        ])?;
+        self.run(query).await
+    }
+
     pub fn set_domain(&mut self, domain: ebisearchdomains::EbiSearchDomains) {
         self.domain = domain;
     }
@@ -59,7 +83,7 @@ impl EbiSearch {
         self.return_format = return_format;
     }
 
-    pub fn client(&mut self, client: EbioticClient) {
+    pub fn set_client(&mut self, client: EbioticClient) {
         self.client = client;
     }
 
@@ -72,8 +96,8 @@ impl EbiSearch {
     }
 
     // TODO - do we need to pass ownership of the client here? This goes for every service RN
-    pub fn get_client(&self) -> &EbioticClient {
-        &self.client
+    pub fn client(self) -> EbioticClient {
+        self.client
     }
 }
 
@@ -81,7 +105,7 @@ impl Service for EbiSearch {
     type ResultType = EbiSearchResult;
     type InputType = ebisearchquery::EbiSearchQuery;
 
-    async fn run(&self, query: Self::InputType) -> Result<Self::ResultType, EbioticError> {
+    async fn run(&self, query: Self::InputType) -> EbioticResult<Self::ResultType> {
         let query_url = query.build()?;
         let url = self.concat_url(&query_url);
         let response = self.client.get(&url).await?;
