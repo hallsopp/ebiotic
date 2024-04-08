@@ -75,6 +75,14 @@ impl EbiSearch {
         self.run(query).await
     }
 
+    pub async fn entries(&self, ids: AccessionIds) -> EbioticResult<EbiSearchResult> {
+        let query =
+            ebisearchquery::EbiSearchQuery::new(vec![ebisearchquery::QueryCommand::Entry(Some(
+                ids,
+            ))])?;
+        self.run(query).await
+    }
+
     pub fn set_domain(&mut self, domain: ebisearchdomains::EbiSearchDomains) {
         self.domain = domain;
     }

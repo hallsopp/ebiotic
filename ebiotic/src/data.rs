@@ -64,12 +64,14 @@ impl AccessionIds {
 
 impl Display for AccessionIds {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut ids = String::new();
-        for id in &self.ids {
-            ids.push_str(id);
-            ids.push(',');
-        }
+        let ids = self.ids.join(",");
         write!(f, "{}", ids)
+    }
+}
+
+impl From<Vec<String>> for AccessionIds {
+    fn from(ids: Vec<String>) -> Self {
+        AccessionIds { ids }
     }
 }
 

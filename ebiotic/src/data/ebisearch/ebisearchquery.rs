@@ -263,4 +263,14 @@ mod tests {
         let search_query = EbiSearchQuery::new(query);
         assert!(search_query.is_err());
     }
+
+    #[test]
+    fn check_cross_ref_search() {
+        let mut query = Vec::new();
+        let ids = AccessionIds::from(vec!["P12345".to_string(), "P1234567".to_string()]);
+        query.push(QueryCommand::Entry(Some(ids)));
+        query.push(QueryCommand::Xref(Some(EbiSearchDomains::Ena)));
+        let search_query = EbiSearchQuery::new(query).unwrap().build().unwrap();
+        assert_eq!(search_query, "entry/P12345,P1234567/xref/ena/");
+    }
 }
