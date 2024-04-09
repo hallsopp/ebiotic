@@ -4,18 +4,20 @@ use crate::errors::EbioticError;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
+pub type EbiSearchFilters = Vec<EbiSearchFilter>;
+
 pub struct EbiSearchQuery {
     query: Vec<QueryCommand>,
     filters: Option<EbiSearchFilters>,
 }
 
 #[derive(Debug, Clone)]
-pub struct EbiSearchFilters {
-    filter: Option<HashMap<String, String>>,
-    size: Option<u16>,
-    start: Option<u32>,
-    fields: Option<Vec<String>>,
-    sort: Option<HashMap<String, SortOrder>>,
+pub enum EbiSearchFilter {
+    Filter(HashMap<String, String>),
+    Size(u32),
+    Start(u32),
+    Fields(Vec<String>),
+    Sort(HashMap<String, SortOrder>),
 }
 
 #[derive(Debug, Clone)]
@@ -29,12 +31,11 @@ pub enum QueryCommand {
     QueryStr(String),
     Xref(Option<EbiSearchDomains>),
     Entry(Option<AccessionIds>),
-    Term(String),
-    AutoComplete,
-    TopTerms,
-    SeqToolResults,
+    AutoComplete(String),
+    TopTerms(String),
+    SeqToolResults(String, String),
     Download,
-    MoreLikeThis,
+    MoreLikeThis(Option<EbiSearchDomains>),
 }
 
 impl Display for SortOrder {
@@ -64,12 +65,47 @@ impl Display for QueryCommand {
                     write!(f, "entry")
                 }
             }
-            QueryCommand::Term(term) => write!(f, "?term={}", term),
-            QueryCommand::AutoComplete => write!(f, "autocomplete"),
-            QueryCommand::TopTerms => write!(f, "topterms"),
-            QueryCommand::SeqToolResults => write!(f, "seqtoolresults"),
+            QueryCommand::AutoComplete(term) => write!(f, "autocomplete?term={}", term),
+            QueryCommand::TopTerms(fieldid) => write!(f, "topterms/{}", fieldid),
+            QueryCommand::SeqToolResults(toolid, jobid) => {
+                write!(f, "seqtoolresults?toolid={}&jobid={}", toolid, jobid)
+            }
             QueryCommand::Download => write!(f, "download"),
-            QueryCommand::MoreLikeThis => write!(f, "morelikethis"),
+            QueryCommand::MoreLikeThis(domain) => {
+                if let Some(domain) = domain {
+                    write!(f, "morelikethis/{}", domain)
+                } else {
+                    write!(f, "morelikethis")
+                }
+            }
+        }
+    }
+}
+
+impl Display for EbiSearchFilter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EbiSearchFilter::Filter(filters) => {
+                let filt = filters
+                    .iter()
+                    .map(|(key, value)| format!("{}:{}", key, value))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                write!(f, "&filters={}", filt)
+            }
+            EbiSearchFilter::Size(size) => write!(f, "&size={}", size),
+            EbiSearchFilter::Start(start) => write!(f, "&start={}", start),
+            EbiSearchFilter::Fields(fields) => {
+                write!(f, "&fields={}", fields.join(","))
+            }
+            EbiSearchFilter::Sort(sort) => {
+                let sorts = sort
+                    .iter()
+                    .map(|(key, value)| format!("{}:{}", key, value))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                write!(f, "&sort={}", sorts)
+            }
         }
     }
 }
@@ -79,17 +115,31 @@ impl EbiSearchQuery {
     // Some fields are required, some are optional, and some are mutually exclusive.
     // This will be a good place to implement those checks.
 
-    pub fn new(query: Vec<QueryCommand>) -> EbioticResult<EbiSearchQuery> {
+    pub fn new(
+        query: Vec<QueryCommand>,
+        filters: Option<EbiSearchFilters>,
+    ) -> EbioticResult<EbiSearchQuery> {
         if query.len() > 4 {
             return Err(EbioticError::TooManyQueryCommands);
         } else if query.is_empty() {
             return Err(EbioticError::EmptyEbiSearchQuery);
         }
 
-        Ok(EbiSearchQuery {
-            query: query,
-            filters: None,
-        })
+        // TODO: We can check for mutually exclusive and unique filters here.
+
+        Ok(EbiSearchQuery { query, filters })
+    }
+
+    pub fn add_command(&mut self, command: QueryCommand) {
+        self.query.push(command);
+    }
+
+    pub fn add_filter(&mut self, filter: EbiSearchFilter) {
+        if let Some(filters) = &mut self.filters {
+            filters.push(filter);
+        } else {
+            self.filters = Some(vec![filter]);
+        }
     }
 
     pub fn build(&self) -> EbioticResult<String> {
@@ -97,7 +147,7 @@ impl EbiSearchQuery {
 
         for (i, command) in self.query.iter().enumerate() {
             match command {
-                QueryCommand::QueryStr(_) | QueryCommand::Term(_) => {
+                QueryCommand::QueryStr(_) => {
                     if i != self.query.len() - 1 {
                         return Err(EbioticError::QueryStrOrTermNotFirst);
                     }
@@ -110,89 +160,12 @@ impl EbiSearchQuery {
         }
 
         if let Some(filters) = &self.filters {
-            if let Some(f) = &filters.filter {
-                url.push_str("&filter=");
-                for (key, value) in f {
-                    url.push_str(&format!("{}:{}", key, value));
-                }
-            }
-
-            if let Some(size) = &filters.size {
-                url.push_str(&format!("&size={}", size));
-            }
-
-            if let Some(start) = &filters.start {
-                url.push_str(&format!("&start={}", start));
-            }
-
-            if let Some(fields) = &filters.fields {
-                url.push_str("&fields=");
-                for field in fields {
-                    url.push_str(&format!("{},", field));
-                }
-            }
-
-            if let Some(sort) = &filters.sort {
-                url.push_str("&sort=");
-                for (key, value) in sort {
-                    url.push_str(&format!("{}:{}", key, value));
-                }
+            for filter in filters {
+                url.push_str(&format!("{}", filter));
             }
         }
 
         Ok(url)
-    }
-}
-
-impl EbiSearchFilters {
-    pub fn new() -> EbiSearchFilters {
-        EbiSearchFilters {
-            filter: None,
-            size: None,
-            start: None,
-            fields: None,
-            sort: None,
-        }
-    }
-
-    pub fn set_filter(&mut self, filter: HashMap<String, String>) {
-        self.filter = Some(filter);
-    }
-
-    pub fn set_size(&mut self, size: u16) {
-        self.size = Some(size);
-    }
-
-    pub fn set_start(&mut self, start: u32) {
-        self.start = Some(start);
-    }
-
-    pub fn set_fields(&mut self, fields: Vec<String>) {
-        self.fields = Some(fields);
-    }
-
-    pub fn set_sort(&mut self, sort: HashMap<String, SortOrder>) {
-        self.sort = Some(sort);
-    }
-
-    pub fn filter(&self) -> &Option<HashMap<String, String>> {
-        &self.filter
-    }
-
-    pub fn size(&self) -> &Option<u16> {
-        &self.size
-    }
-
-    pub fn start(&self) -> &Option<u32> {
-        &self.start
-    }
-
-    pub fn fields(&self) -> &Option<Vec<String>> {
-        &self.fields
-    }
-
-    pub fn sort(&self) -> &Option<HashMap<String, SortOrder>> {
-        &self.sort
     }
 }
 
@@ -205,7 +178,7 @@ mod tests {
     fn build_query_with_single_command() {
         let mut query = Vec::new();
         query.push(QueryCommand::QueryStr("test".to_string()));
-        let search_query = EbiSearchQuery::new(query).unwrap();
+        let search_query = EbiSearchQuery::new(query, None).unwrap();
         let result = search_query.build().unwrap();
         assert_eq!(result, "?query=test");
     }
@@ -215,20 +188,18 @@ mod tests {
     fn build_query_with_multiple_commands() {
         let mut query = Vec::new();
         query.push(QueryCommand::QueryStr("test".to_string()));
-        query.push(QueryCommand::AutoComplete);
-        let search_query = EbiSearchQuery::new(query).unwrap();
+        query.push(QueryCommand::AutoComplete("lol".to_string()));
+        let search_query = EbiSearchQuery::new(query, None).unwrap();
         let result = search_query.build().unwrap();
-        assert_eq!(result, "?query=testautocomplete");
+        assert_eq!(result, "?query=testautocomplete?term=lol");
     }
 
     #[test]
     fn build_query_with_filters() {
         let mut query = Vec::new();
         query.push(QueryCommand::QueryStr("test".to_string()));
-        let mut search_query = EbiSearchQuery::new(query).unwrap();
-        let mut filters = EbiSearchFilters::new();
-        filters.set_size(10);
-        search_query.filters = Some(filters);
+        let mut search_query = EbiSearchQuery::new(query, None).unwrap();
+        search_query.add_filter(EbiSearchFilter::Size(10));
         let result = search_query.build().unwrap();
         assert_eq!(result, "?query=test&size=10");
     }
@@ -237,12 +208,10 @@ mod tests {
     fn build_query_with_sort_order() {
         let mut query = Vec::new();
         query.push(QueryCommand::QueryStr("test".to_string()));
-        let mut search_query = EbiSearchQuery::new(query).unwrap();
-        let mut filters = EbiSearchFilters::new();
+        let mut search_query = EbiSearchQuery::new(query, None).unwrap();
         let mut sort = HashMap::new();
         sort.insert("field".to_string(), SortOrder::Ascending);
-        filters.set_sort(sort);
-        search_query.filters = Some(filters);
+        search_query.add_filter(EbiSearchFilter::Sort(sort));
         let result = search_query.build().unwrap();
         assert_eq!(result, "?query=test&sort=field:ascending");
     }
@@ -250,7 +219,7 @@ mod tests {
     #[test]
     fn build_query_with_empty_query() {
         let query = Vec::new();
-        let search_query = EbiSearchQuery::new(query);
+        let search_query = EbiSearchQuery::new(query, None);
         assert!(search_query.is_err());
     }
 
@@ -260,7 +229,7 @@ mod tests {
         for _ in 0..5 {
             query.push(QueryCommand::QueryStr("test".to_string()));
         }
-        let search_query = EbiSearchQuery::new(query);
+        let search_query = EbiSearchQuery::new(query, None);
         assert!(search_query.is_err());
     }
 
@@ -270,7 +239,7 @@ mod tests {
         let ids = AccessionIds::from(vec!["P12345".to_string(), "P1234567".to_string()]);
         query.push(QueryCommand::Entry(Some(ids)));
         query.push(QueryCommand::Xref(Some(EbiSearchDomains::Ena)));
-        let search_query = EbiSearchQuery::new(query).unwrap().build().unwrap();
+        let search_query = EbiSearchQuery::new(query, None).unwrap().build().unwrap();
         assert_eq!(search_query, "entry/P12345,P1234567/xref/ena/");
     }
 }

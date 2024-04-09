@@ -51,35 +51,86 @@ impl EbiSearch {
         }
     }
 
-    pub async fn xref(&self) -> EbioticResult<EbiSearchResult> {
-        let query =
-            ebisearchquery::EbiSearchQuery::new(vec![ebisearchquery::QueryCommand::Xref(None)])?;
-        self.run(query).await
-    }
-
-    pub async fn xref_domain(
+    pub async fn xref(
         &self,
-        domain: ebisearchdomains::EbiSearchDomains,
+        target_domain: Option<ebisearchdomains::EbiSearchDomains>,
+        filters: Option<ebisearchquery::EbiSearchFilters>,
     ) -> EbioticResult<EbiSearchResult> {
-        let query = ebisearchquery::EbiSearchQuery::new(vec![ebisearchquery::QueryCommand::Xref(
-            Some(domain),
-        )])?;
+        let mut query = ebisearchquery::EbiSearchQuery::new(
+            vec![ebisearchquery::QueryCommand::Xref(None)],
+            filters,
+        )?;
+        if let Some(domain) = target_domain {
+            query.add_command(ebisearchquery::QueryCommand::Xref(Some(domain)));
+        }
+
         self.run(query).await
     }
 
-    pub async fn autocomplete(&self, term: String) -> EbioticResult<EbiSearchResult> {
-        let query = ebisearchquery::EbiSearchQuery::new(vec![
-            ebisearchquery::QueryCommand::AutoComplete,
-            ebisearchquery::QueryCommand::Term(term),
-        ])?;
+    pub async fn autocomplete(
+        &self,
+        term: String,
+        filters: Option<ebisearchquery::EbiSearchFilters>,
+    ) -> EbioticResult<EbiSearchResult> {
+        let query = ebisearchquery::EbiSearchQuery::new(
+            vec![ebisearchquery::QueryCommand::AutoComplete(term)],
+            filters,
+        )?;
         self.run(query).await
     }
 
-    pub async fn entries(&self, ids: AccessionIds) -> EbioticResult<EbiSearchResult> {
-        let query =
-            ebisearchquery::EbiSearchQuery::new(vec![ebisearchquery::QueryCommand::Entry(Some(
-                ids,
-            ))])?;
+    pub async fn entries(
+        &self,
+        ids: AccessionIds,
+        filters: Option<ebisearchquery::EbiSearchFilters>,
+    ) -> EbioticResult<EbiSearchResult> {
+        let query = ebisearchquery::EbiSearchQuery::new(
+            vec![ebisearchquery::QueryCommand::Entry(Some(ids))],
+            filters,
+        )?;
+        self.run(query).await
+    }
+
+    pub async fn more_like_this(
+        &self,
+        ids: AccessionIds,
+        target_domain: Option<ebisearchdomains::EbiSearchDomains>,
+        filters: Option<ebisearchquery::EbiSearchFilters>,
+    ) -> EbioticResult<EbiSearchResult> {
+        let mut query = ebisearchquery::EbiSearchQuery::new(
+            vec![ebisearchquery::QueryCommand::Entry(Some(ids))],
+            filters,
+        )?;
+        if let Some(domain) = target_domain {
+            query.add_command(ebisearchquery::QueryCommand::MoreLikeThis(Some(domain)));
+        }
+        self.run(query).await
+    }
+
+    pub async fn seq_tool_results(
+        &self,
+        tool_id: String,
+        job_id: String,
+        filters: Option<ebisearchquery::EbiSearchFilters>,
+    ) -> EbioticResult<EbiSearchResult> {
+        let query = ebisearchquery::EbiSearchQuery::new(
+            vec![ebisearchquery::QueryCommand::SeqToolResults(
+                tool_id, job_id,
+            )],
+            filters,
+        )?;
+        self.run(query).await
+    }
+
+    pub async fn top_terms(
+        &self,
+        field_id: String,
+        filters: Option<ebisearchquery::EbiSearchFilters>,
+    ) -> EbioticResult<EbiSearchResult> {
+        let query = ebisearchquery::EbiSearchQuery::new(
+            vec![ebisearchquery::QueryCommand::TopTerms(field_id)],
+            filters,
+        )?;
         self.run(query).await
     }
 
@@ -103,7 +154,6 @@ impl EbiSearch {
         &self.return_format
     }
 
-    // TODO - do we need to pass ownership of the client here? This goes for every service RN
     pub fn client(self) -> EbioticClient {
         self.client
     }
