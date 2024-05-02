@@ -14,7 +14,7 @@ data structure from the [rust-bio](https://rust-bio.github.io/) library.
 
 **Disclaimer:**
 The library does not safeguard against misuse of the endpoints (beyond hard-coded polling frequencies) and so it is
-important to read and understand the terms of use for each API before using this library.
+important to read and understand the terms of use for each API before using this library. The library is not affiliated with any of the institutes or services it interacts with.
 
 ## Installation
 

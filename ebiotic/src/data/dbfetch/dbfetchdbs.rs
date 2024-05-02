@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 
 // WILL HOPEFULLY REPLACE ALL OF THIS ONCE THE MACROS ARE WORKING
 
+/// The `DbfetchDbs` enum is used to specify the databases to be fetched from the `Dbfetch` service.
 #[derive(Debug, Clone)]
 pub enum DbfetchDbs {
     AlphaFoldDb,

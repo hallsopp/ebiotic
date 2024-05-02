@@ -1,5 +1,12 @@
+use ctor::ctor;
 use ebiotic::data::*;
 use ebiotic::tools::*;
+use env_logger;
+
+#[ctor]
+fn init() {
+    env_logger::init();
+}
 
 #[tokio::test]
 async fn blast_run_with_valid_query_returns_expected_result() {
@@ -100,4 +107,23 @@ async fn test_dbfetch_default_fasta() {
     assert!(result.is_ok());
 
     println!("{:?}", result.unwrap().into_records());
+}
+
+#[tokio::test]
+async fn test_ebi_search() {
+    let ebi_search = EbiSearch::default();
+    let query = "P53";
+    let result = ebi_search.query(query.to_string(), None).await;
+
+    println!("{:?}", result);
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_ebi_search_xref() {
+    let ebi_search = EbiSearch::default();
+    let result = ebi_search.xref(None, None).await;
+
+    println!("{:?}", result);
+    assert!(result.is_ok());
 }

@@ -1,4 +1,4 @@
-use super::{ebisearchdomains::EbiSearchDomains, AccessionIds};
+use super::{ebisearchdomains::EbiSearchDomains, AccessionIds, DataReturnFormats};
 use crate::core::EbioticResult;
 use crate::errors::EbioticError;
 use std::collections::HashMap;
@@ -6,11 +6,14 @@ use std::fmt::{Display, Formatter};
 
 pub type EbiSearchFilters = Vec<EbiSearchFilter>;
 
+/// The `EbiSearchQuery` struct is used to build a query to the EBI Search service.
+#[derive(Debug, Clone)]
 pub struct EbiSearchQuery {
     query: Vec<QueryCommand>,
     filters: Option<EbiSearchFilters>,
 }
 
+/// The `EbiSearchFilter` enum is used to specify the filters to be applied to the EBI Search query.
 #[derive(Debug, Clone)]
 pub enum EbiSearchFilter {
     Filter(HashMap<String, String>),
@@ -18,14 +21,17 @@ pub enum EbiSearchFilter {
     Start(u32),
     Fields(Vec<String>),
     Sort(HashMap<String, SortOrder>),
+    Format(DataReturnFormats),
 }
 
+/// The `SortOrder` enum is used to specify the sort order of the EBI Search filter under `EbiSearchFilter::Sort`.
 #[derive(Debug, Clone)]
 pub enum SortOrder {
     Ascending,
     Descending,
 }
 
+/// The `QueryCommand` enum is used to specify the arguments to the EBI Search query.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum QueryCommand {
     QueryStr(String),
@@ -50,7 +56,7 @@ impl Display for SortOrder {
 impl Display for QueryCommand {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            QueryCommand::QueryStr(query) => write!(f, "?query={}", query),
+            QueryCommand::QueryStr(query) => write!(f, "query={}", query),
             QueryCommand::Xref(domain) => {
                 if let Some(domain) = domain {
                     write!(f, "xref/{}", domain)
@@ -91,12 +97,12 @@ impl Display for EbiSearchFilter {
                     .map(|(key, value)| format!("{}:{}", key, value))
                     .collect::<Vec<String>>()
                     .join(",");
-                write!(f, "&filters={}", filt)
+                write!(f, "filters={}", filt)
             }
-            EbiSearchFilter::Size(size) => write!(f, "&size={}", size),
-            EbiSearchFilter::Start(start) => write!(f, "&start={}", start),
+            EbiSearchFilter::Size(size) => write!(f, "size={}", size),
+            EbiSearchFilter::Start(start) => write!(f, "start={}", start),
             EbiSearchFilter::Fields(fields) => {
-                write!(f, "&fields={}", fields.join(","))
+                write!(f, "fields={}", fields.join(","))
             }
             EbiSearchFilter::Sort(sort) => {
                 let sorts = sort
@@ -104,8 +110,9 @@ impl Display for EbiSearchFilter {
                     .map(|(key, value)| format!("{}:{}", key, value))
                     .collect::<Vec<String>>()
                     .join(",");
-                write!(f, "&sort={}", sorts)
+                write!(f, "sort={}", sorts)
             }
+            EbiSearchFilter::Format(format) => write!(f, "format={}", format),
         }
     }
 }
@@ -130,10 +137,12 @@ impl EbiSearchQuery {
         Ok(EbiSearchQuery { query, filters })
     }
 
+    /// Add a command to the query.
     pub fn add_command(&mut self, command: QueryCommand) {
         self.query.push(command);
     }
 
+    /// Add a filter to the query.
     pub fn add_filter(&mut self, filter: EbiSearchFilter) {
         if let Some(filters) = &mut self.filters {
             filters.push(filter);
@@ -142,6 +151,7 @@ impl EbiSearchQuery {
         }
     }
 
+    /// Compile the query into a URL - checks the query for correctness.
     pub fn build(&self) -> EbioticResult<String> {
         let mut url = String::new();
 
@@ -160,9 +170,12 @@ impl EbiSearchQuery {
         }
 
         if let Some(filters) = &self.filters {
-            for filter in filters {
-                url.push_str(&format!("{}", filter));
-            }
+            let filter_str = filters
+                .iter()
+                .map(|filter| format!("{}", filter))
+                .collect::<Vec<String>>()
+                .join("&");
+            url.push_str(&filter_str);
         }
 
         Ok(url)

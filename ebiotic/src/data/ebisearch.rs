@@ -6,6 +6,7 @@ use bio::io::fasta::Record;
 pub mod ebisearchdomains;
 pub mod ebisearchquery;
 
+/// The `EbiSearch` struct is used to query the EBI Search service.
 #[derive(Debug, Clone)]
 pub struct EbiSearch {
     pub(crate) client: EbioticClient,
@@ -13,6 +14,7 @@ pub struct EbiSearch {
     return_format: DataReturnFormats,
 }
 
+/// The `EbiSearchResult` struct is used to store the results of an EBI Search query.
 #[derive(Debug, Clone)]
 pub struct EbiSearchResult {
     data: String,
@@ -29,10 +31,12 @@ impl Default for EbiSearch {
 }
 
 impl EbiSearchResult {
+    /// Get the data from the EBI Search service result. You own it!
     pub fn data(self) -> String {
         self.data
     }
 
+    /// Parse the data from the EBI Search service into a vector of `bio::io::fasta::Record` objects.
     pub fn into_records(&self) -> Result<Vec<Record>, EbioticError> {
         core::parse_fa_from_bufread(&self.data)
     }
@@ -51,6 +55,20 @@ impl EbiSearch {
         }
     }
 
+    /// Send a query to the EBI Search service under the self domain.
+    pub async fn query(
+        &self,
+        query: String,
+        filters: Option<ebisearchquery::EbiSearchFilters>,
+    ) -> EbioticResult<EbiSearchResult> {
+        let query = ebisearchquery::EbiSearchQuery::new(
+            vec![ebisearchquery::QueryCommand::QueryStr(query)],
+            filters,
+        )?;
+        self.run(query).await
+    }
+
+    /// Send a cross-reference query to the EBI Search service under the self domain.
     pub async fn xref(
         &self,
         target_domain: Option<ebisearchdomains::EbiSearchDomains>,
@@ -67,6 +85,7 @@ impl EbiSearch {
         self.run(query).await
     }
 
+    /// Send an auto-complete query to the EBI Search service under the self domain.
     pub async fn autocomplete(
         &self,
         term: String,
@@ -79,6 +98,7 @@ impl EbiSearch {
         self.run(query).await
     }
 
+    /// Return the specified entries from the EBI Search service under the self domain.
     pub async fn entries(
         &self,
         ids: AccessionIds,
@@ -91,6 +111,7 @@ impl EbiSearch {
         self.run(query).await
     }
 
+    /// Find more like this under the entries from the EBI Search service under the self domain.
     pub async fn more_like_this(
         &self,
         ids: AccessionIds,
@@ -107,6 +128,7 @@ impl EbiSearch {
         self.run(query).await
     }
 
+    /// Query the sequence analsis results from the EBI Search service under the self domain.
     pub async fn seq_tool_results(
         &self,
         tool_id: String,
@@ -122,6 +144,7 @@ impl EbiSearch {
         self.run(query).await
     }
 
+    /// Query the top fields from the EBI Search service under the self domain.
     pub async fn top_terms(
         &self,
         field_id: String,
@@ -134,26 +157,32 @@ impl EbiSearch {
         self.run(query).await
     }
 
+    /// Set the self domain for the EBI Search service.
     pub fn set_domain(&mut self, domain: ebisearchdomains::EbiSearchDomains) {
         self.domain = domain;
     }
 
+    /// Set the return format for the EBI Search service.
     pub fn set_return_format(&mut self, return_format: DataReturnFormats) {
         self.return_format = return_format;
     }
 
+    /// Set the client for the EBI Search service.
     pub fn set_client(&mut self, client: EbioticClient) {
         self.client = client;
     }
 
+    /// Get the self domain for the EBI Search service.
     pub fn domain(&self) -> &ebisearchdomains::EbiSearchDomains {
         &self.domain
     }
 
+    /// Get the return format for the EBI Search service.
     pub fn return_format(&self) -> &DataReturnFormats {
         &self.return_format
     }
 
+    /// Get the client!
     pub fn client(self) -> EbioticClient {
         self.client
     }
@@ -163,9 +192,15 @@ impl Service for EbiSearch {
     type ResultType = EbiSearchResult;
     type InputType = ebisearchquery::EbiSearchQuery;
 
-    async fn run(&self, query: Self::InputType) -> EbioticResult<Self::ResultType> {
+    async fn run(&self, mut query: Self::InputType) -> EbioticResult<Self::ResultType> {
+        if query.contains_format() {
+            return;
+        }
         let query_url = query.build()?;
         let url = self.concat_url(&query_url);
+
+        log::info!("Query URL: {}", url);
+
         let response = self.client.get(&url).await?;
         Ok(EbiSearchResult { data: response })
     }
@@ -183,7 +218,7 @@ impl EbiSearch {
         }
 
         url.push_str(&format!("{}", query));
-        url.push_str(&format!("&format={}", self.return_format));
+        url.push_str(&format!("format={}", self.return_format));
         return url;
     }
 }
