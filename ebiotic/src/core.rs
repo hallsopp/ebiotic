@@ -11,6 +11,8 @@ pub use self::network::EbioticHttpClient;
 // but maintain the same interface internally
 pub use self::reqwest::EbioticReqwestClient as EbioticClient;
 
+pub type EbioticResult<T> = Result<T, EbioticError>;
+
 pub(crate) enum PollStatus {
     Finished,
     Running(u64),
@@ -28,7 +30,7 @@ pub trait Service {
     fn run(
         &self,
         input: Self::InputType,
-    ) -> impl Future<Output = Result<Self::ResultType, EbioticError>> + Send;
+    ) -> impl Future<Output = EbioticResult<Self::ResultType>> + Send;
 }
 
 pub(crate) fn parse_fa_from_bufread(raw_results: &str) -> Result<Vec<Record>, EbioticError> {

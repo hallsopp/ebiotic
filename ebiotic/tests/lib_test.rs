@@ -1,29 +1,33 @@
+use ctor::ctor;
 use ebiotic::data::*;
 use ebiotic::tools::*;
+use env_logger;
+
+#[ctor]
+fn init() {
+    env_logger::init();
+}
 
 #[tokio::test]
 async fn blast_run_with_valid_query_returns_expected_result() {
-    let client = EbioticClient::default();
     let blast = Blast::default();
     let query = "MAKQVQKARKLAEQAERYDDMAAAMKAVTEQGHELSNEERNLLSVAYKNVVGARRSSWRVISSIEQKTERNEKKQQMGKEYREKIEAELQDICNDVLELLDKYLIPNATQPESKVFYLKMKGDYFRYLSEVASGDNKQTTVSNSQQAYQEAFEISKKEMQPTHPIRLGLALNFSVFYYEILNSPDRACRLAKAAFDDASLAKDAESEKNPEEIAWYQSITQ";
-    let result = blast.run(client, query.to_string()).await;
+    let result = blast.run(query.to_string()).await;
 
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn blast_run_with_empty_query_returns_error() {
-    let client = EbioticClient::default();
     let blast = Blast::default();
     let query = "";
-    let result = blast.run(client, query.to_string()).await;
+    let result = blast.run(query.to_string()).await;
 
     assert!(result.is_err());
 }
 
 #[tokio::test]
 async fn clustalo_run_with_valid_sequences_returns_expected_result() {
-    let client = EbioticClient::default();
     let mut clustalo = Clustalo::default();
     clustalo.set_email("harryallsopp8@gmail.com".to_string());
 
@@ -56,7 +60,7 @@ async fn clustalo_run_with_valid_sequences_returns_expected_result() {
             .as_ref(),
     );
 
-    let result = clustalo.run(client, vec![seq1, seq2, seq3, seq4]).await;
+    let result = clustalo.run(vec![seq1, seq2, seq3, seq4]).await;
 
     println!("{:?}", result);
 
@@ -65,45 +69,61 @@ async fn clustalo_run_with_valid_sequences_returns_expected_result() {
 
 #[tokio::test]
 async fn clustalo_run_with_empty_sequences_returns_error() {
-    let client = EbioticClient::default();
     let mut clustalo = Clustalo::default();
     clustalo.set_email("harryallsopp8@gmail.com".to_string());
 
-    let result = clustalo.run(client, vec![]).await;
+    let result = clustalo.run(vec![]).await;
 
     assert!(result.is_err());
 }
 
 #[tokio::test]
 async fn test_dbfetch() {
-    let client = EbioticClient::default();
     let dbfetch = Dbfetch::default();
-    let ids = DbfetchIds::new(vec![
+    let ids = AccessionIds::new(vec![
         "M10051".to_string(),
         "K00650".to_string(),
         "D87894".to_string(),
         "AJ242600".to_string(),
     ]);
 
-    let result = dbfetch.run(client, ids).await;
+    let result = dbfetch.run(ids).await;
     println!("{:?}", result);
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_dbfetch_default_fasta() {
-    let client = EbioticClient::default();
     let dbfetch = Dbfetch::default();
-    let ids = DbfetchIds::new(vec![
+    let ids = AccessionIds::new(vec![
         "M10051".to_string(),
         "K00650".to_string(),
         "D87894".to_string(),
         "AJ242600".to_string(),
     ]);
 
-    let result = dbfetch.run(client, ids).await;
+    let result = dbfetch.run(ids).await;
 
     assert!(result.is_ok());
 
     println!("{:?}", result.unwrap().into_records());
+}
+
+#[tokio::test]
+async fn test_ebi_search() {
+    let ebi_search = EbiSearch::default();
+    let query = "P53";
+    let result = ebi_search.query(query.to_string(), None).await;
+
+    println!("{:?}", result);
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_ebi_search_xref() {
+    let ebi_search = EbiSearch::default();
+    let result = ebi_search.xref(None, None).await;
+
+    println!("{:?}", result);
+    assert!(result.is_ok());
 }

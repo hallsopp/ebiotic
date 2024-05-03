@@ -14,7 +14,7 @@ data structure from the [rust-bio](https://rust-bio.github.io/) library.
 
 **Disclaimer:**
 The library does not safeguard against misuse of the endpoints (beyond hard-coded polling frequencies) and so it is
-important to read and understand the terms of use for each API before using this library.
+important to read and understand the terms of use for each API before using this library. The library is not affiliated with any of the institutes or services it interacts with.
 
 ## Installation
 
@@ -93,7 +93,7 @@ code-bases using thread blocking.
 **Knowledge & Data:**
 
 - DBfetch
-- EBI Search (very much a WIP)
+- EBI Search
 
 ## Contributing
 
@@ -113,4 +113,4 @@ If you have any questions or need help, feel free to open an issue or reach out 
 - Add logging system beyond print statements (e.g. tracing or log crate)
 - Add more configuration options
 - Safety checks for API usage (?)
-- Citations for tools and APIs 
+- Citations for tools and APIs

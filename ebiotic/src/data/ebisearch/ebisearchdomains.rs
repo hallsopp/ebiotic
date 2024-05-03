@@ -2,6 +2,8 @@ use std::fmt::Display;
 
 use super::{AvailableReturnFormats, DataReturnFormats};
 
+/// The `EbiSearchDomains` enum lists the available domains for the EBI search service.
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum EbiSearchDomains {
     All,
     Uniprot,
@@ -13,14 +15,14 @@ pub enum EbiSearchDomains {
     BioSamples,
     ChEMBL,
     ComplexPortal,
-    EGA,
+    Ega,
     Ensembl,
     EnsemblGenomes,
     EuropePMC,
     GeneExpressionAtlas,
     MetaboLights,
     PDBe,
-    PRIDE,
+    Pride,
     Reactome,
     SequenceReadArchive,
     UniParc,
@@ -31,7 +33,7 @@ pub enum EbiSearchDomains {
 impl Display for EbiSearchDomains {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EbiSearchDomains::All => write!(f, ""),
+            EbiSearchDomains::All => write!(f, "/"),
             EbiSearchDomains::Uniprot => write!(f, "uniprot"),
             EbiSearchDomains::Ena => write!(f, "ena"),
             EbiSearchDomains::Embl => write!(f, "embl"),
@@ -41,14 +43,14 @@ impl Display for EbiSearchDomains {
             EbiSearchDomains::BioSamples => write!(f, "biosamples"),
             EbiSearchDomains::ChEMBL => write!(f, "chembl"),
             EbiSearchDomains::ComplexPortal => write!(f, "complexportal"),
-            EbiSearchDomains::EGA => write!(f, "ega"),
+            EbiSearchDomains::Ega => write!(f, "ega"),
             EbiSearchDomains::Ensembl => write!(f, "ensembl"),
             EbiSearchDomains::EnsemblGenomes => write!(f, "ensemblgenomes"),
             EbiSearchDomains::EuropePMC => write!(f, "europepmc"),
             EbiSearchDomains::GeneExpressionAtlas => write!(f, "geneexpressionatlas"),
             EbiSearchDomains::MetaboLights => write!(f, "metabolights"),
             EbiSearchDomains::PDBe => write!(f, "pdbe"),
-            EbiSearchDomains::PRIDE => write!(f, "pride"),
+            EbiSearchDomains::Pride => write!(f, "pride"),
             EbiSearchDomains::Reactome => write!(f, "reactome"),
             EbiSearchDomains::SequenceReadArchive => write!(f, "sequencereadarchive"),
             EbiSearchDomains::UniParc => write!(f, "uniparc"),
@@ -90,14 +92,14 @@ impl AvailableReturnFormats for EbiSearchDomains {
             EbiSearchDomains::BioSamples => vec![DataReturnFormats::Json],
             EbiSearchDomains::ChEMBL => vec![DataReturnFormats::Json],
             EbiSearchDomains::ComplexPortal => vec![DataReturnFormats::Json],
-            EbiSearchDomains::EGA => vec![DataReturnFormats::Json],
+            EbiSearchDomains::Ega => vec![DataReturnFormats::Json],
             EbiSearchDomains::Ensembl => vec![DataReturnFormats::Json],
             EbiSearchDomains::EnsemblGenomes => vec![DataReturnFormats::Json],
             EbiSearchDomains::EuropePMC => vec![DataReturnFormats::Json],
             EbiSearchDomains::GeneExpressionAtlas => vec![DataReturnFormats::Json],
             EbiSearchDomains::MetaboLights => vec![DataReturnFormats::Json],
             EbiSearchDomains::PDBe => vec![DataReturnFormats::Json],
-            EbiSearchDomains::PRIDE => vec![DataReturnFormats::Json],
+            EbiSearchDomains::Pride => vec![DataReturnFormats::Json],
             EbiSearchDomains::Reactome => vec![DataReturnFormats::Json],
             EbiSearchDomains::SequenceReadArchive => vec![DataReturnFormats::Json],
             EbiSearchDomains::UniParc => vec![DataReturnFormats::Json],

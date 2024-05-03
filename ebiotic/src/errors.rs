@@ -20,4 +20,8 @@ pub enum EbioticError {
     ReturnFormatNotAvailable(String, String),
     #[error("Empty queries are not permitted. Add something!")]
     EmptyEbiSearchQuery,
+    #[error("Too many query commands. Maximum of 4 allowed.")]
+    TooManyQueryCommands,
+    #[error("Query string/search term must be the last or only command.")]
+    QueryStrOrTermNotFirst,
 }
