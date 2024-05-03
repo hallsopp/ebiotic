@@ -152,7 +152,8 @@ impl EbiSearchQuery {
     }
 
     /// Compile the query into a URL - checks the query for correctness.
-    pub fn build(&self) -> EbioticResult<String> {
+    pub fn build(&self, return_format: &String) -> EbioticResult<String> {
+        let mut query_included = false;
         let mut url = String::new();
 
         for (i, command) in self.query.iter().enumerate() {
@@ -161,7 +162,8 @@ impl EbiSearchQuery {
                     if i != self.query.len() - 1 {
                         return Err(EbioticError::QueryStrOrTermNotFirst);
                     }
-                    url.push_str(&format!("{}", command));
+                    url.push_str(&format!("?{}", command));
+                    query_included = true;
                 }
                 _ => {
                     url.push_str(&format!("{}/", command));
@@ -170,12 +172,24 @@ impl EbiSearchQuery {
         }
 
         if let Some(filters) = &self.filters {
+            if !query_included {
+                url.push_str("?")
+            } else {
+                url.push_str("&")
+            }
             let filter_str = filters
                 .iter()
                 .map(|filter| format!("{}", filter))
                 .collect::<Vec<String>>()
                 .join("&");
             url.push_str(&filter_str);
+            url.push_str(&format!("&format={}", return_format));
+        } else {
+            if !query_included {
+                url.push_str(&format!("?format={}", return_format));
+            } else {
+                url.push_str(&format!("&format={}", return_format));
+            }
         }
 
         Ok(url)
@@ -192,8 +206,8 @@ mod tests {
         let mut query = Vec::new();
         query.push(QueryCommand::QueryStr("test".to_string()));
         let search_query = EbiSearchQuery::new(query, None).unwrap();
-        let result = search_query.build().unwrap();
-        assert_eq!(result, "?query=test");
+        let result = search_query.build(&"test".to_string()).unwrap();
+        assert_eq!(result, "?query=test&format=test");
     }
 
     #[test]
@@ -203,7 +217,7 @@ mod tests {
         query.push(QueryCommand::QueryStr("test".to_string()));
         query.push(QueryCommand::AutoComplete("lol".to_string()));
         let search_query = EbiSearchQuery::new(query, None).unwrap();
-        let result = search_query.build().unwrap();
+        let result = search_query.build(&"test".to_string()).unwrap();
         assert_eq!(result, "?query=testautocomplete?term=lol");
     }
 
@@ -213,8 +227,8 @@ mod tests {
         query.push(QueryCommand::QueryStr("test".to_string()));
         let mut search_query = EbiSearchQuery::new(query, None).unwrap();
         search_query.add_filter(EbiSearchFilter::Size(10));
-        let result = search_query.build().unwrap();
-        assert_eq!(result, "?query=test&size=10");
+        let result = search_query.build(&"test".to_string()).unwrap();
+        assert_eq!(result, "?query=test&size=10&format=test");
     }
 
     #[test]
@@ -225,8 +239,8 @@ mod tests {
         let mut sort = HashMap::new();
         sort.insert("field".to_string(), SortOrder::Ascending);
         search_query.add_filter(EbiSearchFilter::Sort(sort));
-        let result = search_query.build().unwrap();
-        assert_eq!(result, "?query=test&sort=field:ascending");
+        let result = search_query.build(&"test".to_string()).unwrap();
+        assert_eq!(result, "?query=test&sort=field:ascending&format=test");
     }
 
     #[test]
@@ -252,7 +266,10 @@ mod tests {
         let ids = AccessionIds::from(vec!["P12345".to_string(), "P1234567".to_string()]);
         query.push(QueryCommand::Entry(Some(ids)));
         query.push(QueryCommand::Xref(Some(EbiSearchDomains::Ena)));
-        let search_query = EbiSearchQuery::new(query, None).unwrap().build().unwrap();
-        assert_eq!(search_query, "entry/P12345,P1234567/xref/ena/");
+        let search_query = EbiSearchQuery::new(query, None)
+            .unwrap()
+            .build(&"test".to_string())
+            .unwrap();
+        assert_eq!(search_query, "entry/P12345,P1234567/xref/ena/?format=test");
     }
 }

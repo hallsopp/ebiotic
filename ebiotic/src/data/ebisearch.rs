@@ -193,10 +193,7 @@ impl Service for EbiSearch {
     type InputType = ebisearchquery::EbiSearchQuery;
 
     async fn run(&self, mut query: Self::InputType) -> EbioticResult<Self::ResultType> {
-        if query.contains_format() {
-            return;
-        }
-        let query_url = query.build()?;
+        let query_url = query.build(&self.return_format.to_string())?;
         let url = self.concat_url(&query_url);
 
         log::info!("Query URL: {}", url);
@@ -218,7 +215,6 @@ impl EbiSearch {
         }
 
         url.push_str(&format!("{}", query));
-        url.push_str(&format!("format={}", self.return_format));
         return url;
     }
 }
